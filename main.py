@@ -16,19 +16,19 @@ import matplotlib.pyplot as plt
 # cv.waitKey()
 from cv2 import VideoCapture
 
-ball_color = 'green'  # choose color to recognize
+ball_color = 'red'  # choose color to recognize
 color_dist = {'red': {'Lower': np.array([0, 60, 60]), 'Upper': np.array([6, 255, 255])},
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
-              'green': {'Lower': np.array([35, 43, 35]), 'Upper': np.array([90, 255, 255])},
+              'green': {'Lower': np.array([35, 43, 46]), 'Upper': np.array([77, 255, 255])},
               }  # define the exact bound for each color
 
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
 # print("1")
 
-KNOWN_DISTANCE = 32
-KNOWN_WIDTH = 2
-KNOWN_HEIGHT = 3
+KNOWN_DISTANCE = 15
+KNOWN_WIDTH = 0.4724
+KNOWN_HEIGHT = 1.5748
 
 
 def find_marker(image):
@@ -43,7 +43,7 @@ def find_marker(image):
 
 
 # IMAGE_PATH = ["Picture1.jpg", "Picture2.jpg"]
-focalLength = 4
+focalLength = 2.8
 
 
 # image = cv2.imread(IMAGE_PATH[0])
@@ -52,10 +52,26 @@ focalLength = 4
 
 
 def distance_to_camera(knownWidth, focalLength, perWidth):
-    if perWidth != 0:
-        return (knownWidth * focalLength) / perWidth
-    return 0
+    # if perWidth != 0:
+    return (knownWidth * focalLength) / perWidth
 
+
+# return 0
+
+def calculate_focalDistance(img_path):
+    first_image = cv2.imread(img_path)
+
+    marker = find_marker(first_image)
+
+    focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+
+    print('focalLength = ', focalLength)
+
+    return focalLength
+
+
+img_path = "Picture1.jpg"
+focalLength = calculate_focalDistance(img_path)
 
 #
 while cap.isOpened():  # while the capture is open
@@ -95,11 +111,15 @@ while cap.isOpened():  # while the capture is open
                 Max = max(cnts, key=cv2.contourArea)  # find outer edges of the rectangle
                 rect = cv2.minAreaRect(Max)  # draw the min area rectangle
                 box = cv2.boxPoints(rect)  # save the corner point to box
-
                 if rect[1][0] != 0:
-                    inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect[1][0])
-                    cv2.putText(frame, "%.2fcm" % (inches * 30.48 / 12), (frame.shape[1] - 200, frame.shape[0] - 20),
-                                cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
+                    if rect[1][1] < rect[1][0]:
+                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect[1][0])
+                        cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
+                    else:
+                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect[1][1])
+                        cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
 
                 cv2.drawContours(frame, [np.int0(box)], -1, (0, 255, 255), 2)
                 if len(cnts) > 1:
@@ -114,12 +134,21 @@ while cap.isOpened():  # while the capture is open
                     # print("Max")
                     rect2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
                     box2 = cv2.boxPoints(rect2)  # save the corner point to box
+                    print('box2 = ', box2)
 
                     if rect2[1][0] != 0:
-                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect2[1][0])
-                        cv2.putText(frame, "%.2fcm" % (inches * 30.48 / 12),
-                                    (frame.shape[1] - 400, frame.shape[0] - 40),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
+                        if rect2[1][1] < rect2[1][0]:
+                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect2[1][0])
+                            # print('rect2[1][0] = ', rect2[1][0])
+                            cv2.putText(frame, "%.2fcm" % (inches * 2.54),
+                                        (frame.shape[1] - 400, frame.shape[0] - 40),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
+                        else:
+                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect2[1][1])
+                            # print('rect2[1][0] = ', rect2[1][0])
+                            cv2.putText(frame, "%.2fcm" % (inches * 2.54),
+                                        (frame.shape[1] - 400, frame.shape[0] - 40),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
                     cv2.drawContours(frame, [np.int0(box2)], -1, (255, 255, 255), 2)
                     # counter = counter + 1
 
