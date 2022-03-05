@@ -7,6 +7,10 @@ import requests;
 from bs4 import BeautifulSoup;
 import numpy as np
 import cv2
+import serial.tools.list_ports
+import time
+
+
 import imutils
 import matplotlib.pyplot as plt
 
@@ -22,7 +26,7 @@ color_dist = {'red': {'Lower': np.array([0, 60, 60]), 'Upper': np.array([6, 255,
               'green': {'Lower': np.array([35, 43, 46]), 'Upper': np.array([77, 255, 255])},
               }  # define the exact bound for each color
 
-cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
 # print("1")
 
@@ -256,9 +260,19 @@ cv2.destroyAllWindows()
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     pass
-    # url = 'https://cn.bing.com/'
-    # strhtml = requests.get(url)
-    # soup = BeautifulSoup(strhtml.text, 'lxml')
-    # data = soup.select('#main>div>div.mtop.firstMod.clearfix>div.centerBox>ul.newsList>li>a')
-    # print(strhtml.text)
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+    plist = list(serial.tools.list_ports.comports())
+
+    if len(plist) <= 0:
+        print("no serial")
+    else:
+        plist_0 = list(plist[0])
+        print(plist_0)
+        serialName = 'COM5'  # plist_0[0]
+        serialFd = serial.Serial(serialName, 9600, timeout=60)
+        print("serial name ", serialFd.name)
+        while 1:
+            serialFd.write("o".encode())
+            time.sleep(1)
+            serialFd.write("c".encode())
+            time.sleep(1)
