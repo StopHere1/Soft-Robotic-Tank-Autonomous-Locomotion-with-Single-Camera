@@ -25,7 +25,7 @@ color_dist = {'red': {'Lower': np.array([0, 60, 60]), 'Upper': np.array([6, 255,
               'green': {'Lower': np.array([35, 43, 46]), 'Upper': np.array([77, 255, 255])},
               }  # define the exact bound for each color
 
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
 # print("1")
 
@@ -212,8 +212,6 @@ while cap.isOpened():  # while the capture is open
                             if cv2.contourArea(temp[i]) != cv2.contourArea(Max):
                                 secondMax = temp[i]
 
-                    # print(Max)
-                    # print("Max")
                     rect2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
                     box2 = cv2.boxPoints(rect2)  # save the corner point to box
                     # print('box2 = ', box2)
@@ -259,11 +257,13 @@ while cap.isOpened():  # while the capture is open
             cv2.waitKey(1)  # let the frame wait
 
             # messages transmitting to arduino
-            serialFd.write("w".encode())
+            serialFd.write("a".encode())
             # confirming the work done
-            while serialFd.readLine() is None:
+
+            while serialFd.readline().decode() is None:
                 continue
-            print(serialFd.readLine())
+            print(serialFd.readline().decode())
+
         else:
             print("No picture")
     else:
@@ -282,21 +282,21 @@ cv2.destroyAllWindows()
 # img[100,100]=(0,0,255)
 
 # Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    pass
-
-    plist = list(serial.tools.list_ports.comports())
-
-    if len(plist) <= 0:
-        print("no serial")
-    else:
-        plist_0 = list(plist[0])
-        print(plist_0)
-        serialName = 'COM5'  # plist_0[0]
-        serialFd = serial.Serial(serialName, 9600, timeout=60)
-        print("serial name ", serialFd.name)
-        while 1:
-            serialFd.write("o".encode())
-            time.sleep(1)
-            serialFd.write("c".encode())
-            time.sleep(1)
+# if __name__ == '__main__':
+#     pass
+#
+#     plist = list(serial.tools.list_ports.comports())
+#
+#     if len(plist) <= 0:
+#         print("no serial")
+#     else:
+#         plist_0 = list(plist[0])
+#         print(plist_0)
+#         serialName = 'COM5'  # plist_0[0]
+#         serialFd = serial.Serial(serialName, 9600, timeout=60)
+#         print("serial name ", serialFd.name)
+#         while 1:
+#             serialFd.write("o".encode())
+#             time.sleep(1)
+#             serialFd.write("c".encode())
+#             time.sleep(1)
