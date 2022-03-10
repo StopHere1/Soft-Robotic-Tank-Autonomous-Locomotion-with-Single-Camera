@@ -9,7 +9,9 @@ import numpy as np
 import cv2
 import serial.tools.list_ports
 import time
-
+import time
+from pynput import keyboard
+from concurrent.futures import ThreadPoolExecutor
 import imutils
 import matplotlib.pyplot as plt
 
@@ -134,10 +136,94 @@ else:
     plist_0 = list(plist[0])
     print(plist_0)
     serialName = 'COM5'  # plist_0[0] choose according to arduino ide
-    serialFd = serial.Serial(serialName, 9600, timeout=60)
+    serialFd = serial.Serial(serialName, 9600, timeout=.1)
     print("serial name ", serialFd.name)
 
+
+def go_ahead():
+    serialFd.write("w".encode())
+    print("w")
+
+
+def turn_left():
+    serialFd.write("a".encode())
+    print("a")
+
+
+def turn_right():
+    serialFd.write("d".encode())
+    print("d")
+
+
+def middle():
+    serialFd.write("g".encode())
+    print("g")
+
+
+def middle2():
+    serialFd.write("h".encode())
+    print("h")
+
+
+def pump():
+    serialFd.write("q".encode())
+    print("q")
+
+
+def pump2():
+    serialFd.write("e".encode())
+    print("e")
+# def keyboard_listening():
+#     keyboard.HotKey('w', go_ahead())
+#     keyboard.HotKey('a', turn_left())
+#     keyboard.HotKey('d', turn_right())
+#     keyboard.HotKey('g', middle())
 #
+#     keyboard.Listener('esc')
+#
+#
+# keyboard_listening()
+# open the pump
+serialFd.write("q".encode())
+
+
+def keyboardListener():
+    while True:
+        with keyboard.Listener(on_press=on_press, on_release = on_release) as listener:
+            listener.join()
+
+
+def on_press(key):
+    try :
+        print(f'letter: {key.char}')
+    except AttributeError:
+        print(f'key= {key}')
+
+
+def on_release (key):
+    if key.char == 'w':
+        go_ahead()
+        return False
+    elif key.char == 'a':
+        turn_left()
+        return False
+    elif key.char == 'd':
+        turn_right()
+        return False
+    elif key.char == 'g':
+        middle()
+    elif key.char == 'h':
+        middle2()
+    elif key.char == 'q':
+        pump()
+    elif key.char == 'e':
+        pump2()
+        return False
+
+
+keyboardListener()
+
+
 while cap.isOpened():  # while the capture is open
     # print("1")
     ret, frame = cap.read()  # read ret and frame
@@ -258,11 +344,14 @@ while cap.isOpened():  # while the capture is open
 
             # messages transmitting to arduino
             serialFd.write("a".encode())
-            # confirming the work done
-
-            while serialFd.readline().decode() is None:
+            # waiting till the work done
+            time.sleep(1)
+            # check response
+            while 1:
+                if serialFd.readline() == 1:
+                    break
                 continue
-            print(serialFd.readline().decode())
+            print("Command Done!")
 
         else:
             print("No picture")
