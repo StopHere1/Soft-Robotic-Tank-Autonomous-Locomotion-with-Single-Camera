@@ -3,23 +3,16 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-import requests;
-from bs4 import BeautifulSoup;
 import numpy as np
 import cv2
 import serial.tools.list_ports
 import time
-import time
 from pynput import keyboard
-from concurrent.futures import ThreadPoolExecutor
-import imutils
-import matplotlib.pyplot as plt
 
 # print(cv.__version__)
 # img = cv.imread("E:\SUSTECH\Student Work\FORSTUDY\Lab\IEEE SoftRobot Competition\ComputerVersion\GreenBlocks.jpg",1)
 # cv.imshow("1",img)
 # cv.waitKey()
-from cv2 import VideoCapture
 
 ball_color = 'red'  # choose color to recognize
 color_dist = {'red': {'Lower': np.array([0, 60, 60]), 'Upper': np.array([6, 255, 255])},
@@ -57,23 +50,24 @@ def find_marker(image):  # function to find color block
 # focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
 
 
-def distance_to_camera(knownWidth, focalLength, perWidth):  # function to get the distance to the camera(inch)
+def distance_to_camera(known_width, focal_length, per_width):  # function to get the distance to the camera(inch)
     # if perWidth != 0:
-    return (knownWidth * focalLength) / perWidth
+    return (known_width * focal_length) / per_width
 
 
 # return 0
 
-def calculate_focalDistance(img_path):  # function to calculate focaldistance using image saved
-    first_image = cv2.imread(img_path)
+
+def calculate_focal_distance(image_path):  # function to calculate focal_distance using image saved
+    first_image = cv2.imread(image_path)
 
     marker = find_marker(first_image)
 
-    focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+    focal_length = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
 
     print('focalLength = ', focalLength)
 
-    return focalLength
+    return focal_length
 
 
 def is_lefthalf(box):  # determine if the color block is in the left half
@@ -120,15 +114,17 @@ def is_parallel(dist1, dist2):  # determine if the color blocks are parallel
 
 
 # function to get the distance between the middle point of color blocks and the center of the picture
-def calculate_error(box1, box2):
-    pass
+def calculate_error(box_1, box_2):
+    x1 = (box_1[0][0] + box_1[1][0] + box_1[2][0] + box_1[3][0]) / 4
+    x2 = (box_2[0][0] + box_2[1][0] + box_2[2][0] + box_2[3][0]) / 4
+    x_mean = (x1 + x2) / 2
+    return x_mean - 320
 
 
 img_path = "Picture1.jpg"  # image saved for focalDistance calculation
-focalLength = calculate_focalDistance(img_path)
-
+focalLength = calculate_focal_distance(img_path)
 plist = list(serial.tools.list_ports.comports())
-
+last_command = 0
 # set up serials and COM
 if len(plist) <= 0:
     print("no serial")
@@ -140,67 +136,70 @@ else:
     print("serial name ", serialFd.name)
 
 
+#  Keyboard listening code begins here
 def go_ahead():
     serialFd.write("w".encode())
+    global last_command
+    last_command = 1
     print("w")
 
 
 def turn_left():
     serialFd.write("a".encode())
+    global last_command
+    last_command = 1
     print("a")
 
 
 def turn_right():
     serialFd.write("d".encode())
+    global last_command
+    last_command = 1
     print("d")
 
 
 def middle():
     serialFd.write("g".encode())
+    global last_command
+    last_command = 4
     print("g")
 
 
 def middle2():
     serialFd.write("h".encode())
+    global last_command
+    last_command = 4.5
     print("h")
 
 
 def pump():
     serialFd.write("q".encode())
+    global last_command
+    last_command = 0
     print("q")
 
 
 def pump2():
     serialFd.write("e".encode())
+    global last_command
+    last_command = 0
     print("e")
-# def keyboard_listening():
-#     keyboard.HotKey('w', go_ahead())
-#     keyboard.HotKey('a', turn_left())
-#     keyboard.HotKey('d', turn_right())
-#     keyboard.HotKey('g', middle())
-#
-#     keyboard.Listener('esc')
-#
-#
-# keyboard_listening()
-# open the pump
-serialFd.write("q".encode())
 
 
-def keyboardListener():
+def keyboard_listener():
     while True:
-        with keyboard.Listener(on_press=on_press, on_release = on_release) as listener:
+        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
             listener.join()
 
 
 def on_press(key):
-    try :
+    try:
         print(f'letter: {key.char}')
     except AttributeError:
         print(f'key= {key}')
 
 
-def on_release (key):
+def on_release(key):
     if key.char == 'w':
         go_ahead()
         return False
@@ -221,22 +220,35 @@ def on_release (key):
         return False
 
 
-keyboardListener()
+keyboard_listener()
+
+
+#  Keyboard listening code ends here
+
+
+def next_command(dist_1, dist_2, box_1, box_2):
+    if is_parallel(dist_1, dist_2):
+        error = calculate_error(box_1, box_2)
+        if error > 2:
+            turn_left()
+        elif error < -2:
+            turn_right()
+        else:
+            go_ahead()
+    else:
+        turn_left()
 
 
 while cap.isOpened():  # while the capture is open
-    # print("1")
     ret, frame = cap.read()  # read ret and frame
     if ret:
-        # print("2")
         if frame is not None:  # have image
-            # print("3")
             gs_frame = cv2.GaussianBlur(frame, (5, 5), 0)  # using GaussianBlur
             hsv = cv2.cvtColor(gs_frame, cv2.COLOR_BGR2HSV)  # From BGR to HSV
             erode_hsv = cv2.erode(hsv, None, iterations=2)  # erode to reduce noise
             inRange_hsv = cv2.inRange(erode_hsv, color_dist[ball_color]['Lower'], color_dist[ball_color]['Upper'])
             # delete backgrounds
-            cnts = cv2.findContours(inRange_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
+            cnt_s = cv2.findContours(inRange_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
             # find contours
             # print(frame.shape[0], ' ', frame.shape[1])  # 480 * 640 zero locates at
             # marker = find_marker(frame)
@@ -253,14 +265,18 @@ while cap.isOpened():  # while the capture is open
             # contours.sort_contours()
 
             # print(len(cnts))
-            if len(cnts) != 0:
+            distance_1 = 0
+            distance_2 = 0
+            box1 = 0
+            box2 = 0
+            if len(cnt_s) != 0:
                 # counter = 0
 
                 # cnts.sort(key=cv2.contourArea(cnts), reverse=False)
 
-                Max = max(cnts, key=cv2.contourArea)  # find outer edges of the rectangle
-                rect1 = cv2.minAreaRect(Max)  # draw the min area rectangle
-                box1 = cv2.boxPoints(rect1)  # save the corner point to box
+                Max = max(cnt_s, key=cv2.contourArea)  # find outer edges of the rectangle
+                rect_1 = cv2.minAreaRect(Max)  # draw the min area rectangle
+                box1 = cv2.boxPoints(rect_1)  # save the corner point to box
 
                 # if isinLeftHalf(box) == 0:
                 #     print('box1 in the left')
@@ -276,30 +292,30 @@ while cap.isOpened():  # while the capture is open
                 # elif isinHighHalf(box) == 2:
                 #     print('box1 in the low')
 
-                if rect1[1][0] != 0:
-                    if rect1[1][1] < rect1[1][0]:
-                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect1[1][0])
-                        distance1 = inches * 2.4
+                if rect_1[1][0] != 0:
+                    if rect_1[1][1] < rect_1[1][0]:
+                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][0])
+                        distance_1 = inches * 2.4
                         # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
                         #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
                     else:
-                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect1[1][1])
-                        distance1 = inches * 2.4
+                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][1])
+                        distance_1 = inches * 2.4
                         # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
                         #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
 
-                print('distance1 = ', distance1)
+                # print('distance1 = ', distance_1)
                 cv2.drawContours(frame, [np.int0(box1)], -1, (0, 255, 255), 2)
-                if len(cnts) > 1:
-                    temp = cnts
-                    secondMax = cnts[0]
+                if len(cnt_s) > 1:
+                    temp = cnt_s
+                    secondMax = cnt_s[0]
                     for i in range(0, len(temp) - 1):
                         if cv2.contourArea(temp[i]) > cv2.contourArea(secondMax):
                             if cv2.contourArea(temp[i]) != cv2.contourArea(Max):
                                 secondMax = temp[i]
 
-                    rect2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
-                    box2 = cv2.boxPoints(rect2)  # save the corner point to box
+                    rect_2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
+                    box2 = cv2.boxPoints(rect_2)  # save the corner point to box
                     # print('box2 = ', box2)
 
                     # if isinLeftHalf(box2) == 0:
@@ -316,22 +332,22 @@ while cap.isOpened():  # while the capture is open
                     # elif isinHighHalf(box2) == 2:
                     #     print('box2 in the low')
 
-                    if rect2[1][0] != 0:
-                        if rect2[1][1] < rect2[1][0]:
-                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect2[1][0])
-                            distance2 = inches * 2.4
+                    if rect_2[1][0] != 0:
+                        if rect_2[1][1] < rect_2[1][0]:
+                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][0])
+                            distance_2 = inches * 2.4
                             # print('rect2[1][0] = ', rect2[1][0])
                             # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
                             #             (frame.shape[1] - 400, frame.shape[0] - 40),
                             #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
                         else:
-                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect2[1][1])
-                            distance2 = inches * 2.4
+                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][1])
+                            distance_2 = inches * 2.4
                             # print('rect2[1][0] = ', rect2[1][0])
                             # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
                             #             (frame.shape[1] - 400, frame.shape[0] - 40),
                             #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
-                    print('distance2 = ', distance2)
+                    # print('distance2 = ', distance_2)
                     cv2.drawContours(frame, [np.int0(box2)], -1, (255, 255, 255), 2)
                     # counter = counter + 1
 
@@ -343,15 +359,17 @@ while cap.isOpened():  # while the capture is open
             cv2.waitKey(1)  # let the frame wait
 
             # messages transmitting to arduino
-            serialFd.write("a".encode())
+            if distance_1 != 0 and distance_2 != 0 and box1 != 0 and box2 != 0:
+                next_command(distance_1, distance_2, box1, box2)
+
             # waiting till the work done
             time.sleep(1)
             # check response
-            while 1:
-                if serialFd.readline() == 1:
-                    break
-                continue
-            print("Command Done!")
+            # while 1:
+            #     if serialFd.readline() == 1:
+            #         break
+            #     continue
+            # print("Command Done!")
 
         else:
             print("No picture")
@@ -361,31 +379,3 @@ while cap.isOpened():  # while the capture is open
 cap.release()
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
-# img = np.zeros((256,256,3),np.uint8)
-#
-# plt.imshow(img[:,:, ::-1])
-#
-# print(img[100,100])
-# print(img[100,100,0])
-# img[100,100]=(0,0,255)
-
-# Press the green button in the gutter to run the script.
-# if __name__ == '__main__':
-#     pass
-#
-#     plist = list(serial.tools.list_ports.comports())
-#
-#     if len(plist) <= 0:
-#         print("no serial")
-#     else:
-#         plist_0 = list(plist[0])
-#         print(plist_0)
-#         serialName = 'COM5'  # plist_0[0]
-#         serialFd = serial.Serial(serialName, 9600, timeout=60)
-#         print("serial name ", serialFd.name)
-#         while 1:
-#             serialFd.write("o".encode())
-#             time.sleep(1)
-#             serialFd.write("c".encode())
-#             time.sleep(1)
