@@ -22,10 +22,12 @@ void turnRight(int time1); //turn right
 void middle(boolean flag); //bellows controlling
 void turnLeft(int time1); //turn left
 void reset(); //reset muscle state
+void keep(int x); //keep current pressure
 
 void setup()
 {
   Serial.begin(9600);
+  Serial.setTimeout(0.5);
   pinMode(Pin1, OUTPUT);
   pinMode(Pin2, OUTPUT);
   pinMode(Pin3, OUTPUT);
@@ -38,13 +40,14 @@ void setup()
   pinMode(Pin10, OUTPUT);
   pinMode(Pin11, OUTPUT);
   pinMode(Pin12, OUTPUT);
+//  middle(false);
 }
 
 void loop()
 {
-  char val = Serial.read();
-  middle(false);
-  switch (val) {
+  char Command = Serial.read();
+  
+  switch (Command) {
     case 'w' :
       goAhead(1000);
       break;
@@ -67,7 +70,6 @@ void loop()
       middle(false);
       break;
     default:
-      middle(true);
       break;
   }
 }
@@ -92,80 +94,106 @@ void goAhead(int time1) {
   digitalWrite(Pin9, HIGH); //left back
   digitalWrite(Pin10, LOW); //left back
   delay(time1);
-  Serial.print("Command done!");
+  keep(1);
+  keep(2);
+
+  Serial.print(1);
 }
 
 void turnRight(int time1) {
-  
+
   digitalWrite(Pin7, HIGH); //right front
   digitalWrite(Pin8, LOW); //right front
   digitalWrite(Pin9, LOW); //right back
   digitalWrite(Pin10, HIGH); //right back
-  
+
   delay(time1);
 
   digitalWrite(Pin7, LOW); //right front
   digitalWrite(Pin8, HIGH); //right front
   digitalWrite(Pin9, HIGH); //right back
   digitalWrite(Pin10, LOW); //right back
-  
+
   delay(time1);
-  Serial.print("Command done!");
+
+  keep(2);
+  Serial.print(1);
 }
 
 void turnLeft(int time1) {
-  
+
   digitalWrite(Pin3, HIGH); //right front
   digitalWrite(Pin4, LOW); //right front
   digitalWrite(Pin5, LOW); //right back
   digitalWrite(Pin6, HIGH); //right back
-  
+
   delay(time1);
 
   digitalWrite(Pin3, LOW); //right front
   digitalWrite(Pin4, HIGH); //right front
   digitalWrite(Pin5, HIGH); //right back
   digitalWrite(Pin6, LOW); //right back
-  
+
   delay(time1);
-  
-  Serial.print("Command done!");
+  keep(1);
+  Serial.print(1);
 }
+
 void pump(boolean flag) {
   if (flag) {
-    digitalWrite(Pin1, HIGH);
+//    digitalWrite(Pin1, HIGH);
     digitalWrite(Pin2, HIGH);
   }
   else {
-    digitalWrite(Pin1, LOW);
+//    digitalWrite(Pin1, LOW);
     digitalWrite(Pin2, LOW);
   }
-  Serial.print("Command done!");
+  Serial.print(1);
 }
 
 void middle(boolean flag) {
   if (flag) {
     digitalWrite(Pin11, HIGH);
     digitalWrite(Pin12, LOW);
-    delay(3500);
+    delay(4000);
     digitalWrite(Pin11, LOW);
     digitalWrite(Pin12, LOW);
   }
   else {
     digitalWrite(Pin11, LOW);
     digitalWrite(Pin12, HIGH);
-    delay(4000);
+    delay(4500);
     digitalWrite(Pin11, LOW);
     digitalWrite(Pin12, LOW);
   }
-  Serial.print("Command done!");
+  keep(3);
+  Serial.print(1);
 }
+
 void reset() {
-  for (int i = 1;i <= 12; i++) {
-    if (digitalRead(i) == HIGH){
-      digitalWrite(i,LOW);
+  for (int i = 1; i <= 12; i++) {
+    if (digitalRead(i) == HIGH) {
+      digitalWrite(i, LOW);
     }
   }
   delay(1000);
-  Serial.print("Command done!");
+  Serial.print(1);
+}
+
+void keep(int x) {
+  switch (x) {
+    case 1:
+      digitalWrite(Pin3, LOW); //right front
+      digitalWrite(Pin4, LOW); //right front
+      digitalWrite(Pin5, LOW); //right back
+      digitalWrite(Pin6, LOW); //right back
+    case 2:
+      digitalWrite(Pin7, LOW); //right front
+      digitalWrite(Pin8, LOW); //right front
+      digitalWrite(Pin9, LOW); //right back
+      digitalWrite(Pin10, LOW); //right back
+    case 3:
+      digitalWrite(Pin11, LOW); //right front
+      digitalWrite(Pin12, LOW); //right front
+  }
 }
