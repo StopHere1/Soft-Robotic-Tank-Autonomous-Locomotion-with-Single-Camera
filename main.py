@@ -277,21 +277,6 @@ while cap.isOpened():  # while the capture is open
                 Max = max(cnt_s, key=cv2.contourArea)  # find outer edges of the rectangle
                 rect_1 = cv2.minAreaRect(Max)  # draw the min area rectangle
                 box1 = cv2.boxPoints(rect_1)  # save the corner point to box
-
-                # if isinLeftHalf(box) == 0:
-                #     print('box1 in the left')
-                # elif isinLeftHalf(box) == 1:
-                #     print('box1 in the middle')
-                # elif isinLeftHalf(box) == 2:
-                #     print('box1 in the right')
-                #
-                # if isinHighHalf(box) == 0:
-                #     print('box1 in the high')
-                # elif isinHighHalf(box) == 1:
-                #     print('box1 in the middle')
-                # elif isinHighHalf(box) == 2:
-                #     print('box1 in the low')
-
                 if rect_1[1][0] != 0:
                     if rect_1[1][1] < rect_1[1][0]:
                         inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][0])
@@ -317,21 +302,6 @@ while cap.isOpened():  # while the capture is open
                     rect_2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
                     box2 = cv2.boxPoints(rect_2)  # save the corner point to box
                     # print('box2 = ', box2)
-
-                    # if isinLeftHalf(box2) == 0:
-                    #     print('box2 in the left')
-                    # elif isinLeftHalf(box2) == 1:
-                    #     print('box2 in the middle')
-                    # elif isinLeftHalf(box2) == 2:
-                    #     print('box2 in the right')
-                    #
-                    # if isinHighHalf(box2) == 0:
-                    #     print('box2 in the high')
-                    # elif isinHighHalf(box2) == 1:
-                    #     print('box2 in the middle')
-                    # elif isinHighHalf(box2) == 2:
-                    #     print('box2 in the low')
-
                     if rect_2[1][0] != 0:
                         if rect_2[1][1] < rect_2[1][0]:
                             inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][0])
@@ -363,7 +333,7 @@ while cap.isOpened():  # while the capture is open
                 next_command(distance_1, distance_2, box1, box2)
 
             # waiting till the work done
-            time.sleep(1)
+            time.sleep(last_command)
             # check response
             # while 1:
             #     if serialFd.readline() == 1:
