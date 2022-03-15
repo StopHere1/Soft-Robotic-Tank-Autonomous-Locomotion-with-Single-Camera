@@ -34,20 +34,10 @@ def find_marker(image):  # function to find color block
     gray_img = cv2.GaussianBlur(gray_img, (5, 5), 0)
     edged_img = cv2.Canny(gray_img, 35, 125)
 
-    (cnts, _) = cv2.findContours(edged_img.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    c = max(cnts, key=cv2.contourArea)
+    (cnt, _) = cv2.findContours(edged_img.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    c = max(cnt, key=cv2.contourArea)
 
     return cv2.minAreaRect(c)
-
-
-# IMAGE_PATH = ["Picture1.jpg", "Picture2.jpg"]
-
-# focalLength = 2.8
-
-
-# image = cv2.imread(IMAGE_PATH[0])
-# marker = find_marker(image)
-# focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
 
 
 def distance_to_camera(known_width, focal_length, per_width):  # function to get the distance to the camera(inch)
@@ -56,18 +46,6 @@ def distance_to_camera(known_width, focal_length, per_width):  # function to get
 
 
 # return 0
-
-
-def calculate_focal_distance(image_path):  # function to calculate focal_distance using image saved
-    first_image = cv2.imread(image_path)
-
-    marker = find_marker(first_image)
-
-    focal_length = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
-
-    print('focalLength = ', focalLength)
-
-    return focal_length
 
 
 def is_lefthalf(box):  # determine if the color block is in the left half
@@ -99,14 +77,14 @@ def is_highhalf(box):  # determine if the color block is in the higher half
         if box[k][1] <= most_low:
             most_high = box[k][1]
 
-    if most_low < 240:  # 480/2
+    if most_low < 240:  # 480/2 most_low for the lowest point
         return 0
     elif most_high > 240:
         return 2
     return 1
 
 
-def is_parallel(dist1, dist2):  # determine if the color blocks are parallel
+def is_parallel(dist1, dist2):  # determine if the two color blocks are parallel
     if abs(dist1 - dist2) < 2:
         return True
     else:
@@ -121,10 +99,35 @@ def calculate_error(box_1, box_2):
     return x_mean - 320
 
 
+# function to determine if the two color blocks are on the edge
+def on_edge(box_1, box_2):
+    left_most = min(box_1[0][0], box_1[1][0], box_1[2][0], box_1[3][0], box_2[0][0], box_2[1][0], box_2[2][0],
+                    box_2[3][0])
+    right_most = max(box_1[0][0], box_1[1][0], box_1[2][0], box_1[3][0], box_2[0][0], box_2[1][0], box_2[2][0],
+                     box_2[3][0])
+    if left_most < 50 and right_most > 590:
+        return True
+    else:
+        return False
+
+
+# function to calculate focal_distance using image saved
+def calculate_focal_distance(image_path):
+    first_image = cv2.imread(image_path)
+
+    marker = find_marker(first_image)
+
+    focal_length = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+
+    print('focalLength = ', focal_length)
+
+    return focal_length
+
+
 img_path = "Picture1.jpg"  # image saved for focalDistance calculation
-focalLength = calculate_focal_distance(img_path)
-plist = list(serial.tools.list_ports.comports())
-last_command = 0
+focalLength = calculate_focal_distance(img_path)  # calculate focal distance
+plist = list(serial.tools.list_ports.comports())  # find serial
+last_command = 0  # declare the variable to store the time of the last command
 # set up serials and COM
 if len(plist) <= 0:
     print("no serial")
@@ -132,29 +135,29 @@ else:
     plist_0 = list(plist[0])
     print(plist_0)
     serialName = 'COM5'  # plist_0[0] choose according to arduino ide
-    serialFd = serial.Serial(serialName, 9600, timeout=.1)
+    serialFd = serial.Serial(serialName, 9600, timeout=.1)  # define the serial
     print("serial name ", serialFd.name)
 
 
-#  Keyboard listening code begins here
-def go_ahead():
+# Code for sending commands starts here
+def go_ahead():  # 3.5cm per cycle when last_command = 2 s
     serialFd.write("w".encode())
     global last_command
-    last_command = 1
+    last_command = 2
     print("w")
 
 
 def turn_left():
     serialFd.write("a".encode())
     global last_command
-    last_command = 1
+    last_command = 0.5
     print("a")
 
 
-def turn_right():
+def turn_right():  # 7 degree per cycle when last_command = 2 s
     serialFd.write("d".encode())
     global last_command
-    last_command = 1
+    last_command = 0.5
     print("d")
 
 
@@ -165,7 +168,7 @@ def middle():
     print("g")
 
 
-def middle2():
+def middle2():  # inverse function for middle()
     serialFd.write("h".encode())
     global last_command
     last_command = 4.5
@@ -179,13 +182,25 @@ def pump():
     print("q")
 
 
-def pump2():
+def pump2():  # inverse function for pump()
     serialFd.write("e".encode())
     global last_command
     last_command = 0
     print("e")
 
 
+def passing_gate():  # function for passing gates
+    for times in range(1, 5):
+        serialFd.write("w".encode())
+    global last_command
+    last_command = 10
+    print("passing")
+
+
+# Code for sending commands end here
+
+
+#  Keyboard listening code begins here
 def keyboard_listener():
     while True:
         with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
@@ -202,13 +217,10 @@ def on_press(key):
 def on_release(key):
     if key.char == 'w':
         go_ahead()
-        return False
     elif key.char == 'a':
         turn_left()
-        return False
     elif key.char == 'd':
         turn_right()
-        return False
     elif key.char == 'g':
         middle()
     elif key.char == 'h':
@@ -220,60 +232,46 @@ def on_release(key):
         return False
 
 
-keyboard_listener()
+keyboard_listener()  # open keyboard listening
 
 
 #  Keyboard listening code ends here
 
-
+# function to send the next command
 def next_command(dist_1, dist_2, box_1, box_2):
-    if is_parallel(dist_1, dist_2):
-        error = calculate_error(box_1, box_2)
-        if error > 2:
-            turn_left()
-        elif error < -2:
-            turn_right()
+    if not on_edge(box_1, box_2):  # if the two color blocks are on the edges
+        if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
+            error = calculate_error(box_1, box_2)  # calculate the error
+            if error > 50:
+                turn_right()
+            elif error < -50:
+                turn_left()
+            else:
+                go_ahead()
         else:
-            go_ahead()
+            turn_left()
     else:
-        turn_left()
+        passing_gate()
 
 
+# pump()
 while cap.isOpened():  # while the capture is open
     ret, frame = cap.read()  # read ret and frame
     if ret:
         if frame is not None:  # have image
-            gs_frame = cv2.GaussianBlur(frame, (5, 5), 0)  # using GaussianBlur
+            gs_frame = cv2.GaussianBlur(frame, (5, 5), 1)  # using GaussianBlur
             hsv = cv2.cvtColor(gs_frame, cv2.COLOR_BGR2HSV)  # From BGR to HSV
             erode_hsv = cv2.erode(hsv, None, iterations=2)  # erode to reduce noise
             inRange_hsv = cv2.inRange(erode_hsv, color_dist[ball_color]['Lower'], color_dist[ball_color]['Upper'])
             # delete backgrounds
             cnt_s = cv2.findContours(inRange_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
-            # find contours
-            # print(frame.shape[0], ' ', frame.shape[1])  # 480 * 640 zero locates at
-            # marker = find_marker(frame)
 
-            # if len(cnts) > 1:
-            # cnts = cnts[0] if imutils.is_cv2() else cnts[1]
-            # cntsSorted = sorted(cnts,key=lambda x: cv2.contourArea(x))
-
-            # def cnt_area(cnt):
-            #     area = cv2.contourArea(cnt)
-            #     return area
-            #
-            #
-            # contours.sort_contours()
-
-            # print(len(cnts))
+            # initialize the variables
             distance_1 = 0
             distance_2 = 0
             box1 = 0
             box2 = 0
             if len(cnt_s) != 0:
-                # counter = 0
-
-                # cnts.sort(key=cv2.contourArea(cnts), reverse=False)
-
                 Max = max(cnt_s, key=cv2.contourArea)  # find outer edges of the rectangle
                 rect_1 = cv2.minAreaRect(Max)  # draw the min area rectangle
                 box1 = cv2.boxPoints(rect_1)  # save the corner point to box
@@ -288,9 +286,11 @@ while cap.isOpened():  # while the capture is open
                         distance_1 = inches * 2.4
                         # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
                         #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
-
-                # print('distance1 = ', distance_1)
+                    # if cv2.contourArea(Max,0) < 2:
+                    if cv2.contourArea(Max) < 10:  # if the first block is too small ignore it
+                        distance_1 = 0
                 cv2.drawContours(frame, [np.int0(box1)], -1, (0, 255, 255), 2)
+                # find the second_largest color block
                 if len(cnt_s) > 1:
                     temp = cnt_s
                     secondMax = cnt_s[0]
@@ -301,7 +301,6 @@ while cap.isOpened():  # while the capture is open
 
                     rect_2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
                     box2 = cv2.boxPoints(rect_2)  # save the corner point to box
-                    # print('box2 = ', box2)
                     if rect_2[1][0] != 0:
                         if rect_2[1][1] < rect_2[1][0]:
                             inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][0])
@@ -317,23 +316,24 @@ while cap.isOpened():  # while the capture is open
                             # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
                             #             (frame.shape[1] - 400, frame.shape[0] - 40),
                             #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
-                    # print('distance2 = ', distance_2)
+                        if cv2.contourArea(secondMax) < 10:  # if the first block is too small ignore it
+                            distance_1 = 0
                     cv2.drawContours(frame, [np.int0(box2)], -1, (255, 255, 255), 2)
-                    # counter = counter + 1
-
-                    # if counter == 2:
-                    #     break
-                # print(box)  # draw the rectangle
-
             cv2.imshow('camera', frame)  # show the frame
             cv2.waitKey(1)  # let the frame wait
 
             # messages transmitting to arduino
-            if distance_1 != 0 and distance_2 != 0 and box1 != 0 and box2 != 0:
+            if distance_1 != 0 and distance_2 != 0:
                 next_command(distance_1, distance_2, box1, box2)
-
+            else:
+                turn_right()
             # waiting till the work done
             time.sleep(last_command)
+
+            # while 1:
+            #     if serialFd.read() == "1":
+            #         break
+
             # check response
             # while 1:
             #     if serialFd.readline() == 1:
