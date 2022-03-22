@@ -84,7 +84,7 @@ def is_highhalf(box):  # determine if the color block is in the higher half
 
 
 def is_parallel(dist1, dist2):  # determine if the two color blocks are parallel
-    if abs(dist1 - dist2) < 2:
+    if abs(dist1 - dist2) < 15:
         return True
     else:
         return False
@@ -143,35 +143,35 @@ def go_ahead():  # 3.5cm per cycle when last_command = 2 s
     serialFd.write("w".encode())
     global last_command
     last_command = 2
-    print("w")
+    print("Forward")
 
 
 def turn_left():
     serialFd.write("a".encode())
     global last_command
     last_command = 0.5
-    print("a")
+    print("turn left")
 
 
 def turn_right():  # 7 degree per cycle when last_command = 2 s
     serialFd.write("d".encode())
     global last_command
     last_command = 0.5
-    print("d")
+    print("turn right")
 
 
 def middle():
     serialFd.write("g".encode())
     global last_command
     last_command = 4
-    print("g")
+    print("chou")
 
 
 def middle2():  # inverse function for middle()
     serialFd.write("h".encode())
     global last_command
     last_command = 4.5
-    print("h")
+    print("fang")
 
 
 def pump():
@@ -232,7 +232,7 @@ def on_release(key):
 
 
 keyboard_listener()  # open keyboard listening
-pump()
+# pump()
 
 #  Keyboard listening code ends here
 
@@ -242,16 +242,35 @@ def next_command(dist_1, dist_2, box_1, box_2):
     if not on_edge(box_1, box_2):  # if the two color blocks are on the edges
         if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
             error = calculate_error(box_1, box_2)  # calculate the error
-            if error > 50:
-                turn_right()
-            elif error < -50:
+            if is_lefthalf(box_1) != is_lefthalf(box_2):
+                if error > 40:
+                    print("right more")
+                    turn_left()
+                elif error < -40:
+                    print("left more")
+                    turn_right()
+                else:
+                    print("neither too left nor too right")
+                    go_ahead()
+            elif is_lefthalf(box_1) and is_lefthalf(box_2):
+                print("both in left half")
                 turn_left()
-            else:
-                go_ahead()
+            elif not is_lefthalf(box_1) and not is_lefthalf(box_2):
+                print("both in right half")
+                turn_right()
         else:
+            print("not parallel")
             turn_left()
     else:
         passing_gate()
+
+
+def compare_boxes(box1, box2):
+    if box1[0][0] == box2[0][0] and box1[0][1] == box2[0][1] and box1[1][0] == box2[1][0] and box1[1][1] == box2[1][
+        1] and box1[2][0] == box2[2][0] and box1[2][1] == box2[2][1] and box1[3][0] == box2[3][0] and box1[3][1] == \
+            box2[3][1]:
+        return False
+    return True
 
 
 # pump()
@@ -277,12 +296,12 @@ while cap.isOpened():  # while the capture is open
                 box1 = cv2.boxPoints(rect_1)  # save the corner point to box
                 if rect_1[1][0] != 0:
                     if rect_1[1][1] < rect_1[1][0]:
-                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][0]/2)
+                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][0] / 2)
                         distance_1 = inches * 2.4
                         # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
                         #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
                     else:
-                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][1]/2)
+                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][1] / 2)
                         distance_1 = inches * 2.4
                         # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
                         #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
@@ -305,51 +324,47 @@ while cap.isOpened():  # while the capture is open
 
                     rect_2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
                     box2 = cv2.boxPoints(rect_2)  # save the corner point to box
-                    if rect_2[1][0] != 0 and (box1 != box2).all():
+                    if rect_2[1][0] != 0 and compare_boxes(box1, box2):
                         if rect_2[1][1] < rect_2[1][0]:
-                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][0]/2)
+                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][0] / 2)
                             distance_2 = inches * 2.4
                             # print('rect2[1][0] = ', rect2[1][0])
                             # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
+
                             #             (frame.shape[1] - 400, frame.shape[0] - 40),
                             #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
                         else:
-                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][1]/2)
+                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][1] / 2)
                             distance_2 = inches * 2.4
                             # print('rect2[1][0] = ', rect2[1][0])
                             # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
                             #             (frame.shape[1] - 400, frame.shape[0] - 40),
                             #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
-                        if cv2.contourArea(secondMax) < 1000:  # if the first block is too small ignore it
+                        if cv2.contourArea(secondMax) < 100:  # if the first block is too small ignore it
                             print("box2 too small ignored")
-                            distance_1 = 0
+                            distance_2 = 0
                     cv2.drawContours(frame, [np.int0(box2)], -1, (255, 255, 255), 2)
                     print("distance2 =", distance_2)
-                    print("box2 ==",  box2)
+                    print("box2 ==", box2)
             cv2.imshow('camera', frame)  # show the frame
             cv2.waitKey(1)  # let the frame wait
 
             # messages transmitting to arduino
             if distance_1 != 0 and distance_2 != 0:
                 next_command(distance_1, distance_2, box1, box2)
+                print("Using next command")
             elif distance_1 == 0 and distance_2 == 0:
                 go_ahead()
+                print("did not find color blocks")
             else:
-                turn_right()
+                turn_left()
+                print("only one color block")
             # waiting till the work done
             time.sleep(last_command)
-
-            # while 1:
-            #     if serialFd.read() == "1":
-            #         break
-
-            # check response
-            # while 1:
-            #     if serialFd.readline() == 1:
-            #         break
-            #     continue
-            # print("Command Done!")
-
+            while 1:
+                message = serialFd.readline()
+                if message.decode() == "1":
+                    break
         else:
             print("No picture")
     else:
