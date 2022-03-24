@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 import serial.tools.list_ports
 import time
+import _thread
 from pynput import keyboard
 
 # print(cv.__version__)
@@ -14,13 +15,13 @@ from pynput import keyboard
 # cv.imshow("1",img)
 # cv.waitKey()
 
-ball_color = 'green'  # choose color to recognize
-color_dist = {'red': {'Lower': np.array([0, 60, 60]), 'Upper': np.array([6, 255, 255])},
+ball_color = 'red'  # choose color to recognize
+color_dist = {'red': {'Lower': np.array([160, 120, 200]), 'Upper': np.array([180, 200, 255])},
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
               'green': {'Lower': np.array([35, 43, 46]), 'Upper': np.array([77, 255, 255])},
               }  # define the exact bound for each color
 
-cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
 # print("1")
 
@@ -133,8 +134,8 @@ if len(plist) <= 0:
 else:
     plist_0 = list(plist[0])
     print(plist_0)
-    serialName = 'COM5'  # plist_0[0] choose according to arduino ide
-    serialFd = serial.Serial(serialName, 9600, timeout=.1)  # define the serial
+    serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
+    serialFd = serial.Serial(serialName, 115200, timeout=0.001)  # define the serial
     print("serial name ", serialFd.name)
 
 
@@ -149,14 +150,14 @@ def go_ahead():  # 3.5cm per cycle when last_command = 2 s
 def turn_left():
     serialFd.write("a".encode())
     global last_command
-    last_command = 0.5
+    last_command = 1
     print("turn left")
 
 
 def turn_right():  # 7 degree per cycle when last_command = 2 s
     serialFd.write("d".encode())
     global last_command
-    last_command = 0.5
+    last_command = 1
     print("turn right")
 
 
@@ -201,7 +202,6 @@ def passing_gate():  # function for passing gates
 
 #  Keyboard listening code begins here
 def keyboard_listener():
-    while True:
         with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
             listener.join()
 
@@ -228,10 +228,12 @@ def on_release(key):
         pump()
     elif key.char == 'e':
         pump2()
+    elif key.char == 's':
+        camara()
         return False
 
 
-keyboard_listener()  # open keyboard listening
+# keyboard_listener()  # open keyboard listening
 # pump()
 
 #  Keyboard listening code ends here
@@ -245,10 +247,10 @@ def next_command(dist_1, dist_2, box_1, box_2):
             if is_lefthalf(box_1) != is_lefthalf(box_2):
                 if error > 40:
                     print("right more")
-                    turn_left()
+                    turn_right()
                 elif error < -40:
                     print("left more")
-                    turn_right()
+                    turn_left()
                 else:
                     print("neither too left nor too right")
                     go_ahead()
@@ -273,103 +275,117 @@ def compare_boxes(box1, box2):
     return True
 
 
+# print("1")
 # pump()
-while cap.isOpened():  # while the capture is open
-    ret, frame = cap.read()  # read ret and frame
-    if ret:
-        if frame is not None:  # have image
-            gs_frame = cv2.GaussianBlur(frame, (5, 5), 0)  # using GaussianBlur
-            hsv = cv2.cvtColor(gs_frame, cv2.COLOR_BGR2HSV)  # From BGR to HSV
-            erode_hsv = cv2.erode(hsv, None, iterations=2)  # erode to reduce noise
-            inRange_hsv = cv2.inRange(erode_hsv, color_dist[ball_color]['Lower'], color_dist[ball_color]['Upper'])
-            # delete backgrounds
-            cnt_s = cv2.findContours(inRange_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
+def camara():
+    while cap.isOpened() and serialFd.isOpen():  # while the capture is open
+        ret, frame = cap.read()  # read ret and frame
+        if ret:
+            if frame is not None:  # have image
+                gs_frame = cv2.GaussianBlur(frame, (5, 5), 0)  # using GaussianBlur
+                hsv = cv2.cvtColor(gs_frame, cv2.COLOR_BGR2HSV)  # From BGR to HSV
+                erode_hsv = cv2.erode(hsv, None, iterations=2)  # erode to reduce noise
+                in_range_hsv = cv2.inRange(erode_hsv, color_dist[ball_color]['Lower'], color_dist[ball_color]['Upper'])
+                # delete backgrounds
+                cnt_s = cv2.findContours(in_range_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
 
-            # initialize the variables
-            distance_1 = 0
-            distance_2 = 0
-            box1 = 0
-            box2 = 0
-            if len(cnt_s) != 0:
-                Max = max(cnt_s, key=cv2.contourArea)  # find outer edges of the rectangle
-                rect_1 = cv2.minAreaRect(Max)  # draw the min area rectangle
-                box1 = cv2.boxPoints(rect_1)  # save the corner point to box
-                if rect_1[1][0] != 0:
-                    if rect_1[1][1] < rect_1[1][0]:
-                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][0] / 2)
-                        distance_1 = inches * 2.4
-                        # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
-                        #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
-                    else:
-                        inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][1] / 2)
-                        distance_1 = inches * 2.4
-                        # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
-                        #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
-                    # if cv2.contourArea(Max,0) < 2:
-                    if cv2.contourArea(Max) < 100:  # if the first block is too small ignore it
-                        print("box1 too small ignored")
-                        distance_1 = 0
-                print("distance1 =", distance_1)
-
-                cv2.drawContours(frame, [np.int0(box1)], -1, (0, 255, 255), 2)
-                print("box1 ==", box1)
-                # find the second_largest color block
-                if len(cnt_s) > 1:
-                    temp = cnt_s
-                    secondMax = cnt_s[0]
-                    for i in range(0, len(temp) - 1):
-                        if cv2.contourArea(temp[i]) > cv2.contourArea(secondMax):
-                            if cv2.contourArea(temp[i]) != cv2.contourArea(Max):
-                                secondMax = temp[i]
-
-                    rect_2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
-                    box2 = cv2.boxPoints(rect_2)  # save the corner point to box
-                    if rect_2[1][0] != 0 and compare_boxes(box1, box2):
-                        if rect_2[1][1] < rect_2[1][0]:
-                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][0] / 2)
-                            distance_2 = inches * 2.4
-                            # print('rect2[1][0] = ', rect2[1][0])
-                            # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
-
-                            #             (frame.shape[1] - 400, frame.shape[0] - 40),
+                # initialize the variables
+                distance_1 = 0
+                distance_2 = 0
+                box1 = 0
+                box2 = 0
+                if len(cnt_s) != 0:
+                    Max = max(cnt_s, key=cv2.contourArea)  # find outer edges of the rectangle
+                    rect_1 = cv2.minAreaRect(Max)  # draw the min area rectangle
+                    box1 = cv2.boxPoints(rect_1)  # save the corner point to box
+                    if rect_1[1][0] != 0:
+                        if rect_1[1][1] < rect_1[1][0]:
+                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][0] / 2)
+                            distance_1 = inches * 2.4
+                            # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
                             #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
                         else:
-                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][1] / 2)
-                            distance_2 = inches * 2.4
-                            # print('rect2[1][0] = ', rect2[1][0])
-                            # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
-                            #             (frame.shape[1] - 400, frame.shape[0] - 40),
+                            inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][1] / 2)
+                            distance_1 = inches * 2.4
+                            # cv2.putText(frame, "%.2fcm" % (inches * 2.54), (frame.shape[1] - 200, frame.shape[0] - 20),
                             #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
-                        if cv2.contourArea(secondMax) < 100:  # if the first block is too small ignore it
-                            print("box2 too small ignored")
-                            distance_2 = 0
-                    cv2.drawContours(frame, [np.int0(box2)], -1, (255, 255, 255), 2)
-                    print("distance2 =", distance_2)
-                    print("box2 ==", box2)
-            cv2.imshow('camera', frame)  # show the frame
-            cv2.waitKey(1)  # let the frame wait
+                        # if cv2.contourArea(Max,0) < 2:
+                        if cv2.contourArea(Max) < 100:  # if the first block is too small ignore it
+                            print("box1 too small ignored")
+                            distance_1 = 0
+                    print("distance1 =", distance_1)
+                    cv2.drawContours(frame, [np.int0(box1)], -1, (0, 255, 255), 2)
+                    print("box1 ==", box1)
+                    # find the second_largest color block
+                    if len(cnt_s) > 1:
+                        temp = cnt_s
+                        secondMax = cnt_s[0]
+                        for i in range(0, len(temp) - 1):
+                            if cv2.contourArea(temp[i]) > cv2.contourArea(secondMax):
+                                if cv2.contourArea(temp[i]) != cv2.contourArea(Max):
+                                    secondMax = temp[i]
 
-            # messages transmitting to arduino
-            if distance_1 != 0 and distance_2 != 0:
-                next_command(distance_1, distance_2, box1, box2)
-                print("Using next command")
-            elif distance_1 == 0 and distance_2 == 0:
-                go_ahead()
-                print("did not find color blocks")
+                        rect_2 = cv2.minAreaRect(secondMax)  # draw the min area rectangle
+                        box2 = cv2.boxPoints(rect_2)  # save the corner point to box
+                        if rect_2[1][0] != 0 and compare_boxes(box1, box2):
+                            if rect_2[1][1] < rect_2[1][0]:
+                                inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][0] / 2)
+                                distance_2 = inches * 2.4
+                                # print('rect2[1][0] = ', rect2[1][0])
+                                # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
+
+                                #             (frame.shape[1] - 400, frame.shape[0] - 40),
+                                #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
+                            else:
+                                inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][1] / 2)
+                                distance_2 = inches * 2.4
+                                # print('rect2[1][0] = ', rect2[1][0])
+                                # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
+                                #             (frame.shape[1] - 400, frame.shape[0] - 40),
+                                #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
+                            if cv2.contourArea(secondMax) < 100:  # if the first block is too small ignore it
+                                print("box2 too small ignored")
+                                distance_2 = 0
+                        cv2.drawContours(frame, [np.int0(box2)], -1, (255, 255, 255), 2)
+                        print("distance2 =", distance_2)
+                        print("box2 ==", box2)
+                cv2.imshow('camera', frame)  # show the frame
+                cv2.waitKey(1)  # let the frame wait
+
+                # messages transmitting to arduino
+                if distance_1 != 0 and distance_2 != 0:
+                    next_command(distance_1, distance_2, box1, box2)
+                    print("Using next command")
+                elif distance_1 == 0 and distance_2 == 0:
+                    go_ahead()
+                    print("did not find color blocks")
+                else:
+                    turn_left()
+                    print("only one color block")
+                # waiting till the work done
+                time.sleep(last_command)
+                print(last_command)
+
+                # while 1:
+                #     message = serialFd.readline()
+                #     if message.decode() == "1":
+                #         break
+
             else:
-                turn_left()
-                print("only one color block")
-            # waiting till the work done
-            time.sleep(last_command)
-            while 1:
-                message = serialFd.readline()
-                if message.decode() == "1":
-                    break
+                print("No picture")
         else:
-            print("No picture")
-    else:
-        print("No access to camera")
+            print("No access to camera")
 
-cap.release()
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+try:
+    _thread.start_new_thread(keyboard_listener(), ("Thread-1", 2,))
+    _thread.start_new_thread(camara(), ("Thread-2", 4, ))
+except:
+    print("Error: unable to start new thread")
+
+while 1:
+    pass
