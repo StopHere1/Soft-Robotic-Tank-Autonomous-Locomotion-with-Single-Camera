@@ -42,8 +42,8 @@ void setup()
   pinMode(Pin11, OUTPUT);
   pinMode(Pin12, OUTPUT);
   pinMode(Pin13, OUTPUT);
-  pump(true);
-  middle(true);
+//  pump(true);
+//  middle(true);
 }
 
 void loop()
