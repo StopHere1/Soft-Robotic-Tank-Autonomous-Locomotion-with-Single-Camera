@@ -114,6 +114,73 @@ def DueData(inputdata):  # 新增的核心程序，对读取的数据进行划�
     return Angle[2]
 
 
+def DueData2(inputdata):  # 新增的核心程序，对读取的数据进行划分，各自读到对应的数组里
+    global FrameState  # 在局部修改全局变量，要进行global的定义
+    global Bytenum
+    global CheckSum
+    global a
+    global w
+    global Angle
+    for data in inputdata:  # 在输入的数据进行遍历
+        # data = ord(data)
+        if FrameState == 0:  # 当未确定状态的时候，进入以下判断
+            if data == 0x55 and Bytenum == 0:  # 0x55位于第一位时候，开始读取数据，增大bytenum
+                CheckSum = data
+                Bytenum = 1
+                continue
+            elif data == 0x51 and Bytenum == 1:  # 在byte不为0 且 识别到 0x51 的时候，改变frame
+                CheckSum += data
+                FrameState = 1
+                Bytenum = 2
+            elif data == 0x52 and Bytenum == 1:  # 同理
+                CheckSum += data
+                FrameState = 2
+                Bytenum = 2
+            elif data == 0x53 and Bytenum == 1:
+                CheckSum += data
+                FrameState = 3
+                Bytenum = 2
+        elif FrameState == 1:  # acc    #已确定数据代表加速度
+
+            if Bytenum < 10:  # 读取8个数据
+                ACCData[Bytenum - 2] = data  # 从0开始
+                CheckSum += data
+                Bytenum += 1
+            else:
+                if data == (CheckSum & 0xff):  # 假如校验位正确
+                    a = get_acc(ACCData)
+                CheckSum = 0  # 各数据归零，进行新的循环判断
+                Bytenum = 0
+                FrameState = 0
+        elif FrameState == 2:  # gyro
+
+            if Bytenum < 10:
+                GYROData[Bytenum - 2] = data
+                CheckSum += data
+                Bytenum += 1
+            else:
+                if data == (CheckSum & 0xff):
+                    w = get_gyro(GYROData)
+                CheckSum = 0
+                Bytenum = 0
+                FrameState = 0
+        elif FrameState == 3:  # angle
+
+            if Bytenum < 10:
+                AngleData[Bytenum - 2] = data
+                CheckSum += data
+                Bytenum += 1
+            else:
+                if data == (CheckSum & 0xff):
+                    Angle = get_angle(AngleData)
+                    d = a + w + Angle
+                    print("a(g):%10.3f %10.3f %10.3f w(deg/s):%10.3f %10.3f %10.3f Angle(deg):%10.3f %10.3f %10.3f" % d)
+                CheckSum = 0
+                Bytenum = 0
+                FrameState = 0
+    return Angle[1]
+
+
 def get_acc(datahex):
     axl = datahex[0]
     axh = datahex[1]
@@ -349,12 +416,32 @@ def pump2():  # inverse function for pump()
     print("e")
 
 
-def passing_gate():  # function for passing gates
-    for times in range(1, 10):
-        serialFd.write("w".encode())
-    global last_command
-    last_command = 20
-    print("passing")
+def adjust_passing_gate():  # function for passing gates
+    serial_imu.flushInput()
+    data_hex_function = serial_imu.read(33)
+    angle_z_function = DueData(data_hex_function)
+    if angle_z_function > 2:
+        turn_right()
+        while 0 - angle_z_function < -2:
+            serial_imu.flushInput()
+            data_hex_function = serial_imu.read(33)
+            angle_z_function = DueData(data_hex_function)
+        go_ahead()
+        time.sleep(5)
+        global last_command_char
+        last_command_char = "w"
+    elif angle_z_function < -2:
+        turn_left()
+        while 0-angle_z_function > 2:
+            serial_imu.flushInput()
+            data_hex_function = serial_imu.read(33)
+            angle_z_function = DueData(data_hex_function)
+        go_ahead()
+        time.sleep(5)
+        global last_command_char
+        last_command_char = "w"
+
+    print("adjust & passing")
 
 
 # Code for sending commands end here
@@ -393,51 +480,102 @@ def on_release(key):
         return False
 
 
-# keyboard_listener()  # open keyboard listening
-# pump()
+def open_loop_adjusting(flag):
+    serial_imu.flushInput()
+    data_hex_function = serial_imu.read(33)
+    angle_z_function = DueData(data_hex_function)
+    if flag:
+        turn_right()
+        while -90-angle_z_function < -2:
+            serial_imu.flushInput()
+            data_hex_function = serial_imu.read(33)
+            angle_z_function = DueData(data_hex_function)
+        go_ahead()
+        time.sleep(15)
 
-#  Keyboard listening code ends here
+        serial_imu.flushInput()
+        data_hex_function = serial_imu.read(33)
+        angle_z_function = DueData(data_hex_function)
+        turn_left()
+        while 0-angle_z_function > 2:
+            serial_imu.flushInput()
+            data_hex_function = serial_imu.read(33)
+            angle_z_function = DueData(data_hex_function)
+
+        global last_command_char
+        last_command_char = "a"
+    else:
+        turn_left()
+        while 90 - angle_z_function < 2:
+            serial_imu.flushInput()
+            data_hex_function = serial_imu.read(33)
+            angle_z_function = DueData(data_hex_function)
+        go_ahead()
+        time.sleep(15)
+
+        serial_imu.flushInput()
+        data_hex_function = serial_imu.read(33)
+        angle_z_function = DueData(data_hex_function)
+        turn_right()
+        while 0 - angle_z_function < -2:
+            serial_imu.flushInput()
+            data_hex_function = serial_imu.read(33)
+            angle_z_function = DueData(data_hex_function)
+
+        global last_command_char
+        last_command_char = "d"
 
 
 # function to send the next command
 def next_command(dist_1, dist_2, box_1, box_2):
-    if not on_edge(box_1, box_2):  # if the two color blocks are on the edges
-        if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
-            error = calculate_error(box_1, box_2)  # calculate the error
-            if is_lefthalf(box_1) != is_lefthalf(box_2):
-                if error > 40:
-                    print("right more")
-                    return "d"
-                    # turn_right()
-                elif error < -40:
-                    print("left more")
-                    # turn_left()
-                    return "a"
-                else:
-                    print("neither too left nor too right")
-                    return "w"
-                    # go_ahead()
-            elif is_lefthalf(box_1) and is_lefthalf(box_2):
-                print("both in left half")
-                return "a"
-                # turn_left()
-            elif not is_lefthalf(box_1) and not is_lefthalf(box_2):
-                print("both in right half")
-                # turn_right()
-                return "d"
-        else:
-            if is_lefthalf(box_1):
-                return "a"
-            else:
-                return "d"
-            print("not parallel")
+    # if not on_edge(box_1, box_2):  # if the two color blocks are on the edges
+    #     if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
+    error = calculate_error(box_1, box_2)  # calculate the error
+    if is_lefthalf(box_1) != is_lefthalf(box_2):
+        if error > 40:
+            print("right more")
+            return "d"
+            # turn_right()
+        elif error < -40:
+            print("left more")
             # turn_left()
-    else:
-        return "p"
-        # passing_gate()
+            return "a"
+        else:
+            print("neither too left nor too right")
+            return "w"
+            # go_ahead()
+    elif is_lefthalf(box_1) and is_lefthalf(box_2):
+        print("both in left half")
+        return "a"
+        # turn_left()
+    elif not is_lefthalf(box_1) and not is_lefthalf(box_2):
+        print("both in right half")
+        # turn_right()
+        return "d"
+
+    #     else:
+    #         if is_lefthalf(box_1):
+    #             return "a"
+    #         else:
+    #             return "d"
+    #         print("not parallel")
+    #         # turn_left()
+    # else:
+    #     return "p"
+    #     # passing_gate()
+
+
+# def compare_boxes(box1, box2):
+#     if box1[0][0] == box2[0][0] and box1[0][1] == box2[0][1] and box1[1][0] == box2[1][0] and box1[1][1] == box2[1][
+#         1] and box1[2][0] == box2[2][0] and box1[2][1] == box2[2][1] and box1[3][0] == box2[3][0] and box1[3][1] == \
+#             box2[3][1]:
+#         return False
+#     return True
 
 
 def compare_boxes(box1, box2):
+    box1 = np.int0(box1)
+    box2 = np.int0(box2)
     if box1[0][0] == box2[0][0] and box1[0][1] == box2[0][1] and box1[1][0] == box2[1][0] and box1[1][1] == box2[1][
         1] and box1[2][0] == box2[2][0] and box1[2][1] == box2[2][1] and box1[3][0] == box2[3][0] and box1[3][1] == \
             box2[3][1]:
@@ -455,7 +593,45 @@ def change_last_command_char(char):
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
+# code for going rapidly without camera
 
+# using camera below
+pump()
+time.sleep(1)
+
+serial_imu.flushInput()
+data_hex_func = serial_imu.read(33)
+angle_y = DueData2(data_hex_func)
+go_ahead()
+while angle_y < 25:
+    serial_imu.flushInput()
+    data_hex_function = serial_imu.read(33)
+    angle_y = DueData2(data_hex_func)
+    angle_z = DueData(data_hex_func)
+    if angle_z > 5:
+        turn_right()
+        while angle_z > 2:
+            serial_imu.flushInput()
+            data_hex_function = serial_imu.read(33)
+            angle_z = DueData(data_hex_func)
+        go_ahead()
+    elif angle_z < -5:
+        turn_left()
+        while angle_z < -2:
+            serial_imu.flushInput()
+            data_hex_function = serial_imu.read(33)
+            angle_z = DueData(data_hex_func)
+        go_ahead()
+
+while angle_y > 0:
+    serial_imu.flushInput()
+    data_hex_function = serial_imu.read(33)
+    angle_y = DueData2(data_hex_func)
+last_command_char = "w"
+
+middle()
+time.sleep(5)
+open_loop_adjusting_counter = 0
 while cap.isOpened() and serialFd.isOpen():  # while the capture is open
     ret, frame = cap.read()  # read ret and frame
     if ret:
@@ -468,9 +644,9 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
             cnt_s = cv2.findContours(in_range_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
 
             serial_imu.flushInput()
-            # time.sleep(0.01)
             data_hex = serial_imu.read(33)
-            print(DueData(data_hex))
+            angle_z = DueData(data_hex)
+            # print(DueData(data_hex))
 
             # initialize the variables
             distance_1 = 0
@@ -510,18 +686,9 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                         if rect_2[1][1] < rect_2[1][0]:
                             inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][0])
                             distance_2 = inches * 2.4
-                            # print('rect2[1][0] = ', rect2[1][0])
-                            # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
-
-                            #             (frame.shape[1] - 400, frame.shape[0] - 40),
-                            #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
                         else:
                             inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][1])
                             distance_2 = inches * 2.4
-                            # print('rect2[1][0] = ', rect2[1][0])
-                            # cv2.putText(frame, "%.2fcm" % (inches * 2.54),
-                            #             (frame.shape[1] - 400, frame.shape[0] - 40),
-                            #             cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
                         if cv2.contourArea(secondMax) < 100:  # if the first block is too small ignore it
                             # print("box2 too small ignored")
                             distance_2 = 0
@@ -530,42 +697,71 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                     # print("box2 ==", box2)
             cv2.imshow('camera', frame)  # show the frame
             cv2.waitKey(1)  # let the frame wait
-            # messages transmitting to arduino
-            if distance_1 != 0 and distance_2 != 0:
-                if last_command_char != next_command(distance_1, distance_2, box1, box2):
-                    # global last_command_char
-                    last_command_char = next_command(distance_1, distance_2, box1, box2)
-                    print("last command char = ", last_command_char)
 
-                    if last_command_char == 'w':
-                        go_ahead()
-                    elif last_command_char == 'a':
-                        turn_left()
-                    elif last_command_char == 'd':
-                        turn_right()
-                    elif last_command_char == 'g':
-                        middle()
-                    elif last_command_char == 'h':
-                        middle2()
-                    elif last_command_char == 'q':
-                        pump()
-                    elif last_command_char == 'e':
-                        pump2()
-                print("Using next command")
+            # decision part
+            if distance_1 != 0 and distance_2 != 0:
+                if on_edge(box1, box2):
+                    adjust_passing_gate()
+                else:
+                    if is_parallel(box1, box2):
+                        if last_command_char != next_command(distance_1, distance_2, box1, box2):
+                            # global last_command_char
+                            last_command_char = next_command(distance_1, distance_2, box1, box2)
+                            print("last command char = ", last_command_char)
+                            if last_command_char == 'w':
+                                go_ahead()
+                            elif last_command_char == 'a':
+                                turn_left()
+                            elif last_command_char == 'd':
+                                turn_right()
+                            elif last_command_char == 'g':
+                                middle()
+                            elif last_command_char == 'h':
+                                middle2()
+                            elif last_command_char == 'q':
+                                pump()
+                            elif last_command_char == 'e':
+                                pump2()
+                        print("Using next command")
+                    else:
+                        open_loop_adjusting_counter = open_loop_adjusting_counter + 1
+                        if open_loop_adjusting_counter == 10:
+                            if is_lefthalf(box1):
+                                open_loop_adjusting(True)
+                                open_loop_adjusting_counter = 0
+                            else:
+                                open_loop_adjusting(False)
+                                open_loop_adjusting_counter = 0
             elif distance_1 == 0 and distance_2 == 0:
-                if last_command_char != "w":
-                    # global last_command_char
-                    last_command_char = "w"
-                    go_ahead()
-                # go_ahead()
+                open_loop_adjusting_counter = 0
+                if angle_z > 0:
+                    if last_command_char != "d":
+                        last_command_char = "d"
+                        turn_right()
+                        print("IMU Left")
+                if angle_z < 0:
+                    if last_command_char != "a":
+                        last_command_char = "a"
+                        turn_left()
+                        print("IMU Right")
                 print("did not find color blocks")
             else:
                 # turn_left()
-                if last_command_char != "a":
-                    # global last_command_char
-                    last_command_char = "a"
-                    turn_left()
-                print("only one color block")
+                open_loop_adjusting_counter = open_loop_adjusting_counter+1
+                if open_loop_adjusting_counter == 10:
+                    if is_lefthalf(box1):
+                        open_loop_adjusting(True)
+                        open_loop_adjusting_counter = 0
+                        print("open loop adjusting right done")
+                    else:
+                        open_loop_adjusting(False)
+                        open_loop_adjusting_counter = 0
+                        print("open loop adjusting left done")
+                    # if last_command_char != "a":
+                    #     # global last_command_char
+                    #     last_command_char = "a"
+                    #     turn_left()
+                    print("only one color block")
             # waiting till the work done
             # time.sleep(last_command)
             # print(last_command)
