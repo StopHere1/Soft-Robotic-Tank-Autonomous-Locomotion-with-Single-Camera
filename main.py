@@ -354,9 +354,9 @@ else:
     plist_0 = list(plist[0])
     plist_1 = list(plist[1])
     print(plist_0)
-    serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
-    serialFd = serial.Serial(serialName, 115200, timeout=0.001)  # define the serial
-    serial_imu = serial.Serial(plist_1[0], 115200, timeout=0.5)
+    # serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
+    serialFd = serial.Serial("COM8", 115200, timeout=0.001)  # define the serial
+    serial_imu = serial.Serial("COM7", 115200, timeout=0.5)
     print("serial name ", serialFd.name)
 
 time.sleep(2)
@@ -438,7 +438,8 @@ def adjust_passing_gate():  # function for passing gates
             angle_z_function = DueData(data_hex_function)
         go_ahead()
         time.sleep(5)
-        global last_command_char
+
+        # global last_command_char
         last_command_char = "w"
 
     print("adjust & passing")
@@ -522,7 +523,7 @@ def open_loop_adjusting(flag):
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
 
-        global last_command_char
+        # global last_command_char
         last_command_char = "d"
 
 
@@ -596,37 +597,40 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 # code for going rapidly without camera
 
 # using camera below
-pump()
+# pump()
 time.sleep(1)
 
 serial_imu.flushInput()
 data_hex_func = serial_imu.read(33)
+print("1")
 angle_y = DueData2(data_hex_func)
 go_ahead()
 while angle_y < 25:
     serial_imu.flushInput()
     data_hex_function = serial_imu.read(33)
-    angle_y = DueData2(data_hex_func)
-    angle_z = DueData(data_hex_func)
+    angle_y = DueData2(data_hex_function)
+    angle_z = DueData(data_hex_function)
+    print("2")
     if angle_z > 5:
         turn_right()
         while angle_z > 2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
-            angle_z = DueData(data_hex_func)
+            angle_z = DueData(data_hex_function)
         go_ahead()
     elif angle_z < -5:
         turn_left()
         while angle_z < -2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
-            angle_z = DueData(data_hex_func)
+            angle_z = DueData(data_hex_function)
         go_ahead()
 
 while angle_y > 0:
     serial_imu.flushInput()
     data_hex_function = serial_imu.read(33)
-    angle_y = DueData2(data_hex_func)
+    angle_y = DueData2(data_hex_function)
+    print("3")
 last_command_char = "w"
 
 middle()
