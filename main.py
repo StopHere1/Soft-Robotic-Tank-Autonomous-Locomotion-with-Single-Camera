@@ -23,7 +23,7 @@ color_dist = {'red': {'Lower': np.array([160, 120, 150]), 'Upper': np.array([200
               'green': {'Lower': np.array([35, 43, 46]), 'Upper': np.array([77, 255, 255])},
               }  # define the exact bound for each color
 
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
 # print("1")
 
@@ -354,9 +354,9 @@ else:
     plist_0 = list(plist[0])
     plist_1 = list(plist[1])
     print(plist_0)
-    # serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
+    serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
     serialFd = serial.Serial("COM8", 115200, timeout=0.001)  # define the serial
-    serial_imu = serial.Serial("COM7", 115200, timeout=0.5)
+    serial_imu = serial.Serial("COM10", 115200, timeout=0.5)
     print("serial name ", serialFd.name)
 
 time.sleep(2)
@@ -597,7 +597,7 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 # code for going rapidly without camera
 
 # using camera below
-# pump()
+pump()
 time.sleep(1)
 
 serial_imu.flushInput()
@@ -605,12 +605,15 @@ data_hex_func = serial_imu.read(33)
 print("1")
 angle_y = DueData2(data_hex_func)
 go_ahead()
-while angle_y < 25:
+
+while angle_y < 25:  # waited for the last large angle
     serial_imu.flushInput()
     data_hex_function = serial_imu.read(33)
     angle_y = DueData2(data_hex_function)
     angle_z = DueData(data_hex_function)
     print("2")
+
+    # adjusting left_right direction
     if angle_z > 5:
         turn_right()
         while angle_z > 2:
@@ -626,13 +629,14 @@ while angle_y < 25:
             angle_z = DueData(data_hex_function)
         go_ahead()
 
-while angle_y > 0:
+#  waiting for the robot to reach the plane
+while angle_y > 10:
     serial_imu.flushInput()
     data_hex_function = serial_imu.read(33)
     angle_y = DueData2(data_hex_function)
     print("3")
 last_command_char = "w"
-
+#  switching to camera control
 middle()
 time.sleep(5)
 open_loop_adjusting_counter = 0
@@ -707,7 +711,7 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                 if on_edge(box1, box2):
                     adjust_passing_gate()
                 else:
-                    if is_parallel(box1, box2):
+                    if is_parallel(distance_1, distance_2):
                         if last_command_char != next_command(distance_1, distance_2, box1, box2):
                             # global last_command_char
                             last_command_char = next_command(distance_1, distance_2, box1, box2)
