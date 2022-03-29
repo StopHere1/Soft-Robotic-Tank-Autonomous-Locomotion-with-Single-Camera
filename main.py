@@ -23,8 +23,6 @@ color_dist = {'red': {'Lower': np.array([160, 120, 150]), 'Upper': np.array([200
               'green': {'Lower': np.array([35, 43, 46]), 'Upper': np.array([77, 255, 255])},
               }  # define the exact bound for each color
 
-cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
-cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
 # print("1")
 
 video_width = 1920
@@ -356,10 +354,10 @@ else:
     print(plist_0)
     serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
     serialFd = serial.Serial("COM8", 115200, timeout=0.001)  # define the serial
-    serial_imu = serial.Serial("COM10", 115200, timeout=0.5)
+    serial_imu = serial.Serial("COM7", 115200, timeout=0.5)
     print("serial name ", serialFd.name)
 
-time.sleep(2)
+# time.sleep(2)
 # Code for sending commands starts here
 
 
@@ -482,17 +480,20 @@ def on_release(key):
 
 
 def open_loop_adjusting(flag):
+    go_ahead()
+    time.sleep(5)
+
     serial_imu.flushInput()
     data_hex_function = serial_imu.read(33)
     angle_z_function = DueData(data_hex_function)
     if flag:
         turn_right()
-        while -90-angle_z_function < -2:
+        while 90+angle_z_function > 2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
         go_ahead()
-        time.sleep(15)
+        time.sleep(10)
 
         serial_imu.flushInput()
         data_hex_function = serial_imu.read(33)
@@ -507,12 +508,12 @@ def open_loop_adjusting(flag):
         last_command_char = "a"
     else:
         turn_left()
-        while 90 - angle_z_function < 2:
+        while 90 - angle_z_function > 2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
         go_ahead()
-        time.sleep(15)
+        time.sleep(10)
 
         serial_imu.flushInput()
         data_hex_function = serial_imu.read(33)
@@ -589,73 +590,77 @@ def change_last_command_char(char):
     last_command_char = char
 # print("1")
 # pump()
-
-
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-
 # code for going rapidly without camera
 
 # using camera below
 pump()
 time.sleep(1)
 
-serial_imu.flushInput()
-data_hex_func = serial_imu.read(33)
-print("1")
-angle_y = DueData2(data_hex_func)
-go_ahead()
+# serial_imu.flushInput()
+# data_hex_func = serial_imu.read(33)
+# print("1")
+# angle_y = DueData2(data_hex_func)
+# go_ahead()
+#
+# while angle_y < 25:  # waited for the last large angle
+#     serial_imu.flushInput()
+#     data_hex_function = serial_imu.read(33)
+#     angle_y = DueData2(data_hex_function)
+#     angle_z = DueData(data_hex_function)
+#     print("2")
+#
+#     # adjusting left_right direction
+#     if angle_z > 5:
+#         turn_right()
+#         while angle_z > 2:
+#             serial_imu.flushInput()
+#             data_hex_function = serial_imu.read(33)
+#             angle_z = DueData(data_hex_function)
+#         go_ahead()
+#     elif angle_z < -5:
+#         turn_left()
+#         while angle_z < -2:
+#             serial_imu.flushInput()
+#             data_hex_function = serial_imu.read(33)
+#             angle_z = DueData(data_hex_function)
+#         go_ahead()
+#
+# #  waiting for the robot to reach the plane
+# while angle_y > 10:
+#     serial_imu.flushInput()
+#     data_hex_function = serial_imu.read(33)
+#     angle_y = DueData2(data_hex_function)
+#     print("3")
+# last_command_char = "w"
 
-while angle_y < 25:  # waited for the last large angle
-    serial_imu.flushInput()
-    data_hex_function = serial_imu.read(33)
-    angle_y = DueData2(data_hex_function)
-    angle_z = DueData(data_hex_function)
-    print("2")
-
-    # adjusting left_right direction
-    if angle_z > 5:
-        turn_right()
-        while angle_z > 2:
-            serial_imu.flushInput()
-            data_hex_function = serial_imu.read(33)
-            angle_z = DueData(data_hex_function)
-        go_ahead()
-    elif angle_z < -5:
-        turn_left()
-        while angle_z < -2:
-            serial_imu.flushInput()
-            data_hex_function = serial_imu.read(33)
-            angle_z = DueData(data_hex_function)
-        go_ahead()
-
-#  waiting for the robot to reach the plane
-while angle_y > 10:
-    serial_imu.flushInput()
-    data_hex_function = serial_imu.read(33)
-    angle_y = DueData2(data_hex_function)
-    print("3")
-last_command_char = "w"
 #  switching to camera control
 middle()
+last_command_char = "g"
 time.sleep(5)
+print("middle finished")
 open_loop_adjusting_counter = 0
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
+cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+# print(cap.isOpened(), serialFd.isOpen())
 while cap.isOpened() and serialFd.isOpen():  # while the capture is open
     ret, frame = cap.read()  # read ret and frame
     if ret:
         if frame is not None:  # have image
+            # print("1")
             gs_frame = cv2.GaussianBlur(frame, (5, 5), 0)  # using GaussianBlur
             hsv = cv2.cvtColor(gs_frame, cv2.COLOR_BGR2HSV)  # From BGR to HSV
             erode_hsv = cv2.erode(hsv, None, iterations=2)  # erode to reduce noise
             in_range_hsv = cv2.inRange(erode_hsv, color_dist[ball_color]['Lower'], color_dist[ball_color]['Upper'])
             # delete backgrounds
             cnt_s = cv2.findContours(in_range_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
-
-            serial_imu.flushInput()
-            data_hex = serial_imu.read(33)
-            angle_z = DueData(data_hex)
+            # print("2")
+            # serial_imu.flushInput()
+            # data_hex = serial_imu.read(33)
+            # angle_z = DueData(data_hex)
             # print(DueData(data_hex))
-
+            # print("3")
             # initialize the variables
             distance_1 = 0
             distance_2 = 0
@@ -712,28 +717,25 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                     adjust_passing_gate()
                 else:
                     if is_parallel(distance_1, distance_2):
+                        # global open_loop_adjusting_counter
+                        open_loop_adjusting_counter = 0
                         if last_command_char != next_command(distance_1, distance_2, box1, box2):
                             # global last_command_char
                             last_command_char = next_command(distance_1, distance_2, box1, box2)
                             print("last command char = ", last_command_char)
-                            if last_command_char == 'w':
+                            if last_command_char == "w":
                                 go_ahead()
-                            elif last_command_char == 'a':
+                                # print("print w")
+                            elif last_command_char == "a":
                                 turn_left()
-                            elif last_command_char == 'd':
+                            elif last_command_char == "d":
                                 turn_right()
-                            elif last_command_char == 'g':
-                                middle()
-                            elif last_command_char == 'h':
-                                middle2()
-                            elif last_command_char == 'q':
-                                pump()
-                            elif last_command_char == 'e':
-                                pump2()
+                            # time.sleep(0.1)
                         print("Using next command")
                     else:
+                        # global open_loop_adjusting_counter
                         open_loop_adjusting_counter = open_loop_adjusting_counter + 1
-                        if open_loop_adjusting_counter == 10:
+                        if open_loop_adjusting_counter == 100:
                             if is_lefthalf(box1):
                                 open_loop_adjusting(True)
                                 open_loop_adjusting_counter = 0
@@ -741,13 +743,17 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                                 open_loop_adjusting(False)
                                 open_loop_adjusting_counter = 0
             elif distance_1 == 0 and distance_2 == 0:
+                # global open_loop_adjusting_counter
                 open_loop_adjusting_counter = 0
-                if angle_z > 0:
+                serial_imu.flushInput()
+                data_hex = serial_imu.read(33)
+                angle_z = DueData(data_hex)
+                if angle_z > 2:
                     if last_command_char != "d":
                         last_command_char = "d"
                         turn_right()
                         print("IMU Left")
-                if angle_z < 0:
+                if angle_z < -2:
                     if last_command_char != "a":
                         last_command_char = "a"
                         turn_left()
@@ -755,8 +761,9 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                 print("did not find color blocks")
             else:
                 # turn_left()
+                # global open_loop_adjusting_counter
                 open_loop_adjusting_counter = open_loop_adjusting_counter+1
-                if open_loop_adjusting_counter == 10:
+                if open_loop_adjusting_counter == 100:
                     if is_lefthalf(box1):
                         open_loop_adjusting(True)
                         open_loop_adjusting_counter = 0

@@ -42,7 +42,7 @@ void setup()
   pinMode(Pin11, OUTPUT);
   pinMode(Pin12, OUTPUT);
   pinMode(Pin13, OUTPUT);
-//  pump(true);
+  pump(true);
 //  middle(true);
 }
 
@@ -91,15 +91,6 @@ void loop()
           break;
         case 'q':
           pump(true);
-          break;
-        case 'e':
-          pump(false);
-          break;
-        case 'g':
-          middle(true);
-          break;
-        case 'h':
-          middle(false);
           break;
         default:
           break;
