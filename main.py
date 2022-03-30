@@ -745,6 +745,7 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
             elif distance_1 == 0 and distance_2 == 0:
                 # global open_loop_adjusting_counter
                 open_loop_adjusting_counter = 0
+
                 serial_imu.flushInput()
                 data_hex = serial_imu.read(33)
                 angle_z = DueData(data_hex)
