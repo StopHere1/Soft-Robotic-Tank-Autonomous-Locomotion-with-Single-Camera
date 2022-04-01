@@ -17,10 +17,11 @@ from pynput import keyboard
 # cv.imshow("1",img)
 # cv.waitKey()
 
-ball_color = 'red'  # choose color to recognize
+ball_color = 'green'  # choose color to recognize
 color_dist = {'red': {'Lower': np.array([160, 120, 150]), 'Upper': np.array([200, 200, 255])},
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
-              'green': {'Lower': np.array([35, 43, 46]), 'Upper': np.array([77, 255, 255])},
+              'green': {'Lower': np.array([30, 50, 160]), 'Upper': np.array([102, 130, 192])},
+
               }  # define the exact bound for each color
 
 # print("1")
@@ -275,9 +276,9 @@ def is_lefthalf(box):  # determine if the color block is in the left half
         if box[k][0] <= most_left:
             most_left = box[k][0]
 
-    if most_right < video_width/2:  # 640/2
+    if most_right < video_width / 2:  # 640/2
         return 0
-    elif most_left > video_width/2:
+    elif most_left > video_width / 2:
         return 2
     return 1
 
@@ -293,9 +294,9 @@ def is_highhalf(box):  # determine if the color block is in the higher half
         if box[k][1] <= most_low:
             most_high = box[k][1]
 
-    if most_low < video_height/2:  # 480/2 most_low for the lowest point
+    if most_low < video_height / 2:  # 480/2 most_low for the lowest point
         return 0
-    elif most_high > video_height/2:
+    elif most_high > video_height / 2:
         return 2
     return 1
 
@@ -312,7 +313,7 @@ def calculate_error(box_1, box_2):
     x1 = (box_1[0][0] + box_1[1][0] + box_1[2][0] + box_1[3][0]) / 4
     x2 = (box_2[0][0] + box_2[1][0] + box_2[2][0] + box_2[3][0]) / 4
     x_mean = (x1 + x2) / 2
-    return x_mean - video_width/2
+    return x_mean - video_width / 2
 
 
 # function to determine if the two color blocks are on the edge
@@ -321,13 +322,22 @@ def on_edge(box_1, box_2):
                     box_2[3][0])
     right_most = max(box_1[0][0], box_1[1][0], box_1[2][0], box_1[3][0], box_2[0][0], box_2[1][0], box_2[2][0],
                      box_2[3][0])
-    if left_most < 50 and right_most > video_width-50:
+    if left_most < 50 and right_most > video_width - 50:
         return True
     else:
         return False
 
 
-# function to calculate focal_distance using image saved
+def on_edge1(box_1):
+    left_most = min(box_1[0][0], box_1[1][0], box_1[2][0], box_1[3][0])
+    right_most = max(box_1[0][0], box_1[1][0], box_1[2][0], box_1[3][0])
+    if left_most < 50 or right_most > video_width - 50:
+        return True
+    else:
+        return False
+
+
+# function to calculate  using image saved
 def calculate_focal_distance(image_path):
     first_image = cv2.imread(image_path)
 
@@ -354,7 +364,7 @@ else:
     print(plist_0)
     serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
     serialFd = serial.Serial("COM8", 115200, timeout=0.001)  # define the serial
-    serial_imu = serial.Serial("COM7", 115200, timeout=0.5)
+    serial_imu = serial.Serial("COM9", 115200, timeout=0.5)
     print("serial name ", serialFd.name)
 
 # time.sleep(2)
@@ -430,7 +440,7 @@ def adjust_passing_gate():  # function for passing gates
         last_command_char = "w"
     elif angle_z_function < -2:
         turn_left()
-        while 0-angle_z_function > 2:
+        while 0 - angle_z_function > 2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
@@ -481,14 +491,14 @@ def on_release(key):
 
 def open_loop_adjusting(flag):
     go_ahead()
-    time.sleep(5)
+    time.sleep(10)
 
     serial_imu.flushInput()
     data_hex_function = serial_imu.read(33)
     angle_z_function = DueData(data_hex_function)
     if flag:
         turn_right()
-        while 90+angle_z_function > 2:
+        while 90 + angle_z_function > 2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
@@ -499,7 +509,7 @@ def open_loop_adjusting(flag):
         data_hex_function = serial_imu.read(33)
         angle_z_function = DueData(data_hex_function)
         turn_left()
-        while 0-angle_z_function > 2:
+        while 0 - angle_z_function > 2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
@@ -588,6 +598,9 @@ def compare_boxes(box1, box2):
 def change_last_command_char(char):
     global last_command_char
     last_command_char = char
+
+
+# keyboard_listener()
 # print("1")
 # pump()
 # code for going rapidly without camera
@@ -632,7 +645,7 @@ time.sleep(1)
 #     angle_y = DueData2(data_hex_function)
 #     print("3")
 # last_command_char = "w"
-
+# open_loop_adjusting(True)
 #  switching to camera control
 middle()
 last_command_char = "g"
@@ -763,16 +776,20 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
             else:
                 # turn_left()
                 # global open_loop_adjusting_counter
-                open_loop_adjusting_counter = open_loop_adjusting_counter+1
-                if open_loop_adjusting_counter == 100:
-                    if is_lefthalf(box1):
-                        open_loop_adjusting(True)
-                        open_loop_adjusting_counter = 0
-                        print("open loop adjusting right done")
-                    else:
-                        open_loop_adjusting(False)
-                        open_loop_adjusting_counter = 0
-                        print("open loop adjusting left done")
+                if on_edge1(box1):
+                    go_ahead()
+                    time.sleep(5)
+                else:
+                    open_loop_adjusting_counter = open_loop_adjusting_counter + 1
+                    if open_loop_adjusting_counter == 100:
+                        if is_lefthalf(box1):
+                            open_loop_adjusting(True)
+                            open_loop_adjusting_counter = 0
+                            print("open loop adjusting right done")
+                        else:
+                            open_loop_adjusting(False)
+                            open_loop_adjusting_counter = 0
+                            print("open loop adjusting left done")
                     # if last_command_char != "a":
                     #     # global last_command_char
                     #     last_command_char = "a"
