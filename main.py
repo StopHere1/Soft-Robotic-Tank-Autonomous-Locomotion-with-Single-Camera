@@ -20,7 +20,7 @@ from pynput import keyboard
 ball_color = 'green'  # choose color to recognize
 color_dist = {'red': {'Lower': np.array([160, 120, 150]), 'Upper': np.array([200, 200, 255])},
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
-              'green': {'Lower': np.array([30, 50, 160]), 'Upper': np.array([102, 130, 192])},
+              'green': {'Lower': np.array([50, 50, 160]), 'Upper': np.array([102, 130, 192])},
 
               }  # define the exact bound for each color
 
@@ -363,7 +363,7 @@ else:
     plist_1 = list(plist[1])
     print(plist_0)
     serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
-    serialFd = serial.Serial("COM8", 115200, timeout=0.001)  # define the serial
+    serialFd = serial.Serial("COM8", 115200, timeout=0.1)  # define the serial
     serial_imu = serial.Serial("COM9", 115200, timeout=0.5)
     print("serial name ", serialFd.name)
 
@@ -498,10 +498,14 @@ def open_loop_adjusting(flag):
     angle_z_function = DueData(data_hex_function)
     if flag:
         turn_right()
-        while 90 + angle_z_function > 2:
+        while 90 + angle_z_function > 0.2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
+
+        serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
+        serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+
         go_ahead()
         time.sleep(10)
 
@@ -509,19 +513,26 @@ def open_loop_adjusting(flag):
         data_hex_function = serial_imu.read(33)
         angle_z_function = DueData(data_hex_function)
         turn_left()
-        while 0 - angle_z_function > 2:
+        while 90-angle_z_function > 0.2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
+
+        serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
+        serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
 
         global last_command_char
         last_command_char = "a"
     else:
         turn_left()
-        while 90 - angle_z_function > 2:
+        while 90 - angle_z_function > 0.2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
+
+        serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
+        serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+
         go_ahead()
         time.sleep(10)
 
@@ -529,17 +540,19 @@ def open_loop_adjusting(flag):
         data_hex_function = serial_imu.read(33)
         angle_z_function = DueData(data_hex_function)
         turn_right()
-        while 0 - angle_z_function < -2:
+        while 90 + angle_z_function > 0.2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
 
+        serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
+        serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
         # global last_command_char
         last_command_char = "d"
 
 
 # function to send the next command
-def next_command(dist_1, dist_2, box_1, box_2):
+def next_command(box_1, box_2):
     # if not on_edge(box_1, box_2):  # if the two color blocks are on the edges
     #     if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
     error = calculate_error(box_1, box_2)  # calculate the error
@@ -601,7 +614,7 @@ def change_last_command_char(char):
 
 
 # keyboard_listener()
-# print("1")
+# print("1")a
 # pump()
 # code for going rapidly without camera
 
@@ -645,11 +658,13 @@ time.sleep(1)
 #     angle_y = DueData2(data_hex_function)
 #     print("3")
 # last_command_char = "w"
-# open_loop_adjusting(True)
+
+
 #  switching to camera control
 middle()
 last_command_char = "g"
 time.sleep(5)
+# open_loop_adjusting(False)
 print("middle finished")
 open_loop_adjusting_counter = 0
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
@@ -732,9 +747,9 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                     if is_parallel(distance_1, distance_2):
                         # global open_loop_adjusting_counter
                         open_loop_adjusting_counter = 0
-                        if last_command_char != next_command(distance_1, distance_2, box1, box2):
+                        if last_command_char != next_command(box1, box2):
                             # global last_command_char
-                            last_command_char = next_command(distance_1, distance_2, box1, box2)
+                            last_command_char = next_command(box1, box2)
                             print("last command char = ", last_command_char)
                             if last_command_char == "w":
                                 go_ahead()

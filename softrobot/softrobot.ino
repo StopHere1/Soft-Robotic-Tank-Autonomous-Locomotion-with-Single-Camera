@@ -113,7 +113,12 @@ void loop()
 //turnLeft(1000);
 }
 void goAhead(int time1) {
-
+  digitalWrite(Pin14, LOW);
+  digitalWrite(Pin15, HIGH);
+  digitalWrite(Pin17, HIGH);
+  digitalWrite(Pin16, LOW);
+  delay(400);
+  
   digitalWrite(Pin3, HIGH); //right front
   digitalWrite(Pin4, LOW); //right front
   digitalWrite(Pin5, LOW); //right back
@@ -140,7 +145,12 @@ void goAhead(int time1) {
 }
 
 void turnRight(int time1) {
-
+  digitalWrite(Pin16, LOW);
+  digitalWrite(Pin17, HIGH);
+  digitalWrite(Pin15, LOW);
+  digitalWrite(Pin14, HIGH);
+  delay(400);
+  
   digitalWrite(Pin7, HIGH); //right front
   digitalWrite(Pin8, LOW); //right front
   digitalWrite(Pin9, LOW); //right back
@@ -152,15 +162,20 @@ void turnRight(int time1) {
   digitalWrite(Pin9, HIGH); //right back
   digitalWrite(Pin10, LOW); //right back
   delay(time1);
-  digitalWrite(Pin14, LOW);
-  digitalWrite(Pin15, HIGH);
+//  digitalWrite(Pin14, LOW);
+//  digitalWrite(Pin15, HIGH);
   keep(2);
-  delay(400);
-  digitalWrite(Pin15, LOW);
+//  delay(400);
+//  digitalWrite(Pin15, LOW);
   Serial.print(1);
 }
 
 void turnLeft(int time1) {
+  digitalWrite(Pin14, LOW);
+  digitalWrite(Pin15, HIGH);
+  digitalWrite(Pin17, LOW);
+  digitalWrite(Pin16, HIGH);
+  delay(400);
 
   digitalWrite(Pin3, HIGH); //right front
   digitalWrite(Pin4, LOW); //right front
@@ -173,11 +188,7 @@ void turnLeft(int time1) {
   digitalWrite(Pin5, HIGH); //right back
   digitalWrite(Pin6, LOW); //right back
   delay(time1);
-  digitalWrite(Pin16, LOW);
-  digitalWrite(Pin17, HIGH);
   keep(1);
-  delay(400);
-  digitalWrite(Pin17, LOW);
   Serial.print(1);
 }
 
