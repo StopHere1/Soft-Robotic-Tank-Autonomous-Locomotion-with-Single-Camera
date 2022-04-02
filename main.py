@@ -505,7 +505,7 @@ def open_loop_adjusting(flag):
 
         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-
+        # time.sleep(1)
         go_ahead()
         time.sleep(10)
 
@@ -520,9 +520,9 @@ def open_loop_adjusting(flag):
 
         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-
+        go_ahead()
         global last_command_char
-        last_command_char = "a"
+        last_command_char = "w"
     else:
         turn_left()
         while 90 - angle_z_function > 0.2:
@@ -532,7 +532,6 @@ def open_loop_adjusting(flag):
 
         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-
         go_ahead()
         time.sleep(10)
 
@@ -547,8 +546,10 @@ def open_loop_adjusting(flag):
 
         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+        # time.sleep(1)
         # global last_command_char
-        last_command_char = "d"
+        go_ahead()
+        last_command_char = "w"
 
 
 # function to send the next command
@@ -613,8 +614,8 @@ def change_last_command_char(char):
     last_command_char = char
 
 
-# keyboard_listener()
-# print("1")a
+keyboard_listener()
+# print("1")
 # pump()
 # code for going rapidly without camera
 
@@ -664,7 +665,7 @@ time.sleep(1)
 middle()
 last_command_char = "g"
 time.sleep(5)
-# open_loop_adjusting(False)
+open_loop_adjusting(False)
 print("middle finished")
 open_loop_adjusting_counter = 0
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture

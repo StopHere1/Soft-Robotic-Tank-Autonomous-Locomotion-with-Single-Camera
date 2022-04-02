@@ -21,6 +21,7 @@ int Pin14 = 33;
 int Pin15 = 32;
 int Pin16 = 30;
 int Pin17 = 31;
+int Pin18 = 40;
 
 char Lastchar = "";
 void goAhead(int time); //forward
@@ -54,6 +55,7 @@ void setup()
   pinMode(Pin15, OUTPUT);
   pinMode(Pin16, OUTPUT);
   pinMode(Pin17, OUTPUT);
+  pinMode(Pin18, OUTPUT);
   pump(true);
   resetbrake();
 //  Lastchar = "a";
@@ -197,11 +199,13 @@ void pump(boolean flag) {
     //    digitalWrite(Pin1, HIGH);
     digitalWrite(Pin2, HIGH);
     digitalWrite(Pin13, HIGH);
+    digitalWrite(Pin18, HIGH);
   }
   else {
     //    digitalWrite(Pin1, LOW);
     digitalWrite(Pin2, LOW);
     digitalWrite(Pin13, LOW);
+    digitalWrite(Pin18, LOW);
   }
   Serial.print(1);
 }
