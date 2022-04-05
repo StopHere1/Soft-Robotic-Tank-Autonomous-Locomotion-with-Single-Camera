@@ -751,6 +751,12 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                     counter = counter + 1
             print(cent)
             print(error)
+            for i in range(0, len(cent)-1):
+                for j in range(i+1, len(cent)):
+                    if abs(cent[i]-cent[j]) < 150:
+                        if abs(error[i]) < abs(error[j]):
+                            cent[j] = 0
+                            error[j] = 960
             min_error = 960
             min_pointer = 0
             for i in range(0, len(cent)):
@@ -766,11 +772,11 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
             print(min_pointer, sec_pointer)
             middle_point = (cent[min_pointer] + cent[sec_pointer]) / 2
             middle_error = video_width / 2 - middle_point
-            if middle_error < -5:
+            if middle_error < -8:
                 if last_command_char != "d":
                     turn_right()
                     last_command_char = "d"
-            elif middle_error > 5:
+            elif middle_error > 8:
                 if last_command_char != "a":
                     turn_left()
                     last_command_char = "a"
@@ -781,7 +787,6 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                 time.sleep(60)
             cv2.imshow('camera', frame)  # show the frame
             cv2.waitKey(1)  # let the frame wait
-
         else:
             print("No picture")
     else:
