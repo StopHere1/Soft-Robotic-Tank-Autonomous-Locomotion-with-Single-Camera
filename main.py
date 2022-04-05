@@ -17,14 +17,14 @@ from pynput import keyboard
 # cv.imshow("1",img)
 # cv.waitKey()
 
+
 ball_color = 'green'  # choose color to recognize
-color_dist = {'red': {'Lower': np.array([160, 120, 150]), 'Upper': np.array([200, 200, 255])},
+color_dist = {'red': {'Lower': np.array([160, 100, 150]), 'Upper': np.array([200, 200, 255])},
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
-              'green': {'Lower': np.array([50, 50, 160]), 'Upper': np.array([102, 130, 192])},
+              'green': {'Lower': np.array([35, 43, 117]), 'Upper': np.array([77, 255, 255])},
 
               }  # define the exact bound for each color
-
-# print("1")
+# 35 77 43 255 46 255
 
 video_width = 1920
 video_height = 1080
@@ -276,7 +276,7 @@ def is_lefthalf(box):  # determine if the color block is in the left half
         if box[k][0] <= most_left:
             most_left = box[k][0]
 
-    if most_right < video_width / 2:  # 640/2
+    if most_right < video_width / 2:
         return 0
     elif most_left > video_width / 2:
         return 2
@@ -322,7 +322,7 @@ def on_edge(box_1, box_2):
                     box_2[3][0])
     right_most = max(box_1[0][0], box_1[1][0], box_1[2][0], box_1[3][0], box_2[0][0], box_2[1][0], box_2[2][0],
                      box_2[3][0])
-    if left_most < 50 and right_most > video_width - 50:
+    if left_most < 150 and right_most > video_width - 150:
         return True
     else:
         return False
@@ -331,7 +331,7 @@ def on_edge(box_1, box_2):
 def on_edge1(box_1):
     left_most = min(box_1[0][0], box_1[1][0], box_1[2][0], box_1[3][0])
     right_most = max(box_1[0][0], box_1[1][0], box_1[2][0], box_1[3][0])
-    if left_most < 50 or right_most > video_width - 50:
+    if right_most < 200 or left_most > video_width - 200:
         return True
     else:
         return False
@@ -363,8 +363,8 @@ else:
     plist_1 = list(plist[1])
     print(plist_0)
     serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
-    serialFd = serial.Serial("COM8", 115200, timeout=0.1)  # define the serial
-    serial_imu = serial.Serial("COM9", 115200, timeout=0.5)
+    serialFd = serial.Serial("COM11", 115200, timeout=0.1)  # define the serial
+    serial_imu = serial.Serial("COM7", 115200, timeout=0.5)
     print("serial name ", serialFd.name)
 
 # time.sleep(2)
@@ -373,6 +373,7 @@ else:
 
 serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
 serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+time.sleep(3)
 
 
 def go_ahead():  # 3.5cm per cycle when last_command = 2 s
@@ -425,30 +426,33 @@ def pump2():  # inverse function for pump()
 
 
 def adjust_passing_gate():  # function for passing gates
-    serial_imu.flushInput()
-    data_hex_function = serial_imu.read(33)
-    angle_z_function = DueData(data_hex_function)
-    if angle_z_function > 2:
-        turn_right()
-        while 0 - angle_z_function < -2:
-            serial_imu.flushInput()
-            data_hex_function = serial_imu.read(33)
-            angle_z_function = DueData(data_hex_function)
-        go_ahead()
-        time.sleep(5)
-        global last_command_char
-        last_command_char = "w"
-    elif angle_z_function < -2:
-        turn_left()
-        while 0 - angle_z_function > 2:
-            serial_imu.flushInput()
-            data_hex_function = serial_imu.read(33)
-            angle_z_function = DueData(data_hex_function)
-        go_ahead()
-        time.sleep(5)
 
-        # global last_command_char
-        last_command_char = "w"
+    # serial_imu.flushInput()
+    # data_hex_function = serial_imu.read(33)
+    # angle_z_function = DueData(data_hex_function)
+    # if angle_z_function > 2:
+    #     turn_right()
+    #     while 0 - angle_z_function < -2:
+    #         serial_imu.flushInput()
+    #         data_hex_function = serial_imu.read(33)
+    #         angle_z_function = DueData(data_hex_function)
+    #     go_ahead()
+    #     time.sleep(5)
+    #     global last_command_char
+    #     last_command_char = "w"
+    # elif angle_z_function < -2:
+    #     turn_left()
+    #     while 0 - angle_z_function > 2:
+    #         serial_imu.flushInput()
+    #         data_hex_function = serial_imu.read(33)
+    #         angle_z_function = DueData(data_hex_function)
+    #     go_ahead()
+    #     time.sleep(5)
+
+    go_ahead()
+    time.sleep(5)
+    global last_command_char
+    last_command_char = "w"
 
     print("adjust & passing")
 
@@ -491,7 +495,7 @@ def on_release(key):
 
 def open_loop_adjusting(flag):
     go_ahead()
-    time.sleep(10)
+    time.sleep(5)
 
     serial_imu.flushInput()
     data_hex_function = serial_imu.read(33)
@@ -502,25 +506,26 @@ def open_loop_adjusting(flag):
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
-
+        print("turning right done")
         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
         # time.sleep(1)
         go_ahead()
-        time.sleep(10)
+        time.sleep(1)
 
         serial_imu.flushInput()
         data_hex_function = serial_imu.read(33)
         angle_z_function = DueData(data_hex_function)
         turn_left()
-        while 90-angle_z_function > 0.2:
+        while 90 - angle_z_function > 0.2:
             serial_imu.flushInput()
             data_hex_function = serial_imu.read(33)
             angle_z_function = DueData(data_hex_function)
-
+        print("turning left done")
         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
         go_ahead()
+        time.sleep(1)
         global last_command_char
         last_command_char = "w"
     else:
@@ -532,8 +537,9 @@ def open_loop_adjusting(flag):
 
         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+        print("turning left done")
         go_ahead()
-        time.sleep(10)
+        time.sleep(1)
 
         serial_imu.flushInput()
         data_hex_function = serial_imu.read(33)
@@ -546,8 +552,34 @@ def open_loop_adjusting(flag):
 
         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+        print("turning right done")
         # time.sleep(1)
         # global last_command_char
+        go_ahead()
+        time.sleep(1)
+        last_command_char = "w"
+
+
+def pure_cv_open_loop_adjusting(flag1):
+    global last_command_char
+    go_ahead()
+    time.sleep(5)
+    if not flag1:
+        turn_left()
+        time.sleep(52)
+        go_ahead()
+        time.sleep(10)
+        turn_right()
+        time.sleep(58)
+        go_ahead()
+        last_command_char = "w"
+    else:
+        turn_right()
+        time.sleep(58)
+        go_ahead()
+        time.sleep(10)
+        turn_left()
+        time.sleep(52)
         go_ahead()
         last_command_char = "w"
 
@@ -558,11 +590,11 @@ def next_command(box_1, box_2):
     #     if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
     error = calculate_error(box_1, box_2)  # calculate the error
     if is_lefthalf(box_1) != is_lefthalf(box_2):
-        if error > 40:
+        if error > 30:
             print("right more")
             return "d"
             # turn_right()
-        elif error < -40:
+        elif error < -30:
             print("left more")
             # turn_left()
             return "a"
@@ -570,12 +602,18 @@ def next_command(box_1, box_2):
             print("neither too left nor too right")
             return "w"
             # go_ahead()
-    elif is_lefthalf(box_1) and is_lefthalf(box_2):
+    elif is_lefthalf(box_1) == 0 and is_lefthalf(box_2) == 0:
         print("both in left half")
+        if open_loop_adjusting_counter == 100:
+            pure_cv_open_loop_adjusting(False)
+            open_loop_adjusting_counter == 0
         return "a"
         # turn_left()
-    elif not is_lefthalf(box_1) and not is_lefthalf(box_2):
+    elif is_lefthalf(box_1) == 2 and is_lefthalf(box_2) == 2:
         print("both in right half")
+        if open_loop_adjusting_counter == 100:
+            pure_cv_open_loop_adjusting(True)
+            open_loop_adjusting_counter == 0
         # turn_right()
         return "d"
 
@@ -614,7 +652,7 @@ def change_last_command_char(char):
     last_command_char = char
 
 
-keyboard_listener()
+# keyboard_listener()
 # print("1")
 # pump()
 # code for going rapidly without camera
@@ -665,8 +703,9 @@ time.sleep(1)
 middle()
 last_command_char = "g"
 time.sleep(5)
-open_loop_adjusting(False)
+# open_loop_adjusting(True)
 print("middle finished")
+# pure_cv_open_loop_adjusting(True)
 open_loop_adjusting_counter = 0
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
@@ -743,74 +782,123 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
             # decision part
             if distance_1 != 0 and distance_2 != 0:
                 if on_edge(box1, box2):
+                    print("box1 box2 on edge")
                     adjust_passing_gate()
                 else:
                     if is_parallel(distance_1, distance_2):
+                        print("parallel")
                         # global open_loop_adjusting_counter
                         open_loop_adjusting_counter = 0
                         if last_command_char != next_command(box1, box2):
+                            print("last command char = ", last_command_char)
                             # global last_command_char
                             last_command_char = next_command(box1, box2)
-                            print("last command char = ", last_command_char)
+                            print("last command char changed = ", last_command_char)
                             if last_command_char == "w":
                                 go_ahead()
                                 # print("print w")
                             elif last_command_char == "a":
                                 turn_left()
+                                # if open_loop_adjusting_counter == 100:
+                                #     pure_cv_open_loop_adjusting(False)
+                                #     open_loop_adjusting_counter == 0
                             elif last_command_char == "d":
                                 turn_right()
+                                # if open_loop_adjusting_counter == 100:
+                                #     pure_cv_open_loop_adjusting(True)
+                                #     open_loop_adjusting_counter == 0
                             # time.sleep(0.1)
                         print("Using next command")
                     else:
+                        print("not parallel")
                         # global open_loop_adjusting_counter
                         open_loop_adjusting_counter = open_loop_adjusting_counter + 1
-                        if open_loop_adjusting_counter == 100:
-                            if is_lefthalf(box1):
-                                open_loop_adjusting(True)
-                                open_loop_adjusting_counter = 0
-                            else:
-                                open_loop_adjusting(False)
-                                open_loop_adjusting_counter = 0
+                        # if open_loop_adjusting_counter == 150:
+                        if is_lefthalf(box1) == 0:
+                            # open_loop_adjusting(True)
+                            # pure_cv_open_loop_adjusting(True)
+                            print("last command char = ", last_command_char)
+                            if last_command_char != "a":
+                                turn_left()
+                                last_command_char = "a"
+                                print("last command char changed = ", last_command_char)
+                                print("in left half")
+                            open_loop_adjusting_counter = 0
+                        elif is_lefthalf(box1) == 2:
+                            # open_loop_adjusting(False)
+                            # pure_cv_open_loop_adjusting(False)
+                            print("last command char= ", last_command_char)
+                            if last_command_char != "d":
+                                turn_right()
+                                last_command_char = "d"
+                                print("last command char changed = ", last_command_char)
+                                print("in right half")
+                            open_loop_adjusting_counter = 0
             elif distance_1 == 0 and distance_2 == 0:
                 # global open_loop_adjusting_counter
                 open_loop_adjusting_counter = 0
 
-                serial_imu.flushInput()
-                data_hex = serial_imu.read(33)
-                angle_z = DueData(data_hex)
-                if angle_z > 2:
-                    if last_command_char != "d":
-                        last_command_char = "d"
-                        turn_right()
-                        print("IMU Left")
-                if angle_z < -2:
-                    if last_command_char != "a":
-                        last_command_char = "a"
-                        turn_left()
-                        print("IMU Right")
+                # serial_imu.flushInput()
+                # data_hex = serial_imu.read(33)
+                # angle_z = DueData(data_hex)
+                #
+                # if angle_z > 2:
+                #     if last_command_char != "d":
+                #         last_command_char = "d"
+                #         turn_right()
+                #         print("IMU Left")
+                # if angle_z < -2:
+                #     if last_command_char != "a":
+                #         last_command_char = "a"
+                #         turn_left()
+                #         print("IMU Right")
+
+                if last_command_char != "w":
+                    go_ahead()
+                    last_command_char = "w"
+                print("last command char = ", last_command_char)
                 print("did not find color blocks")
             else:
-                # turn_left()
-                # global open_loop_adjusting_counter
-                if on_edge1(box1):
-                    go_ahead()
-                    time.sleep(5)
-                else:
-                    open_loop_adjusting_counter = open_loop_adjusting_counter + 1
-                    if open_loop_adjusting_counter == 100:
-                        if is_lefthalf(box1):
-                            open_loop_adjusting(True)
+                if distance_1 != 0:
+                    print("only one color block")
+                    # turn_left()
+                    # global open_loop_adjusting_counter
+                    if on_edge1(box1):
+                        print("on edge")
+                        go_ahead()
+                        time.sleep(5)
+                        if last_command_char != "w":
+                            last_command_char = "w"
+                        print("last command char changed = ", last_command_char)
+                    else:
+                        print("not on edge")
+                        # open_loop_adjusting_counter = open_loop_adjusting_counter + 1
+                        # if open_loop_adjusting_counter == 150:
+                        if is_lefthalf(box1) == 0:
+                            print("left")
+                            # open_loop_adjusting(True)
+                            # pure_cv_open_loop_adjusting(True)
                             open_loop_adjusting_counter = 0
-                            print("open loop adjusting right done")
-                        else:
-                            open_loop_adjusting(False)
+                            if last_command_char != "a":
+                                turn_left()
+                                last_command_char = "a"
+                                # print("open loop adjusting left done")
+                            print("last command char = ", last_command_char)
+                        elif is_lefthalf(box1) == 2:
+                            print("right")
+                            # open_loop_adjusting(False)
+                            # pure_cv_open_loop_adjusting(False)
                             open_loop_adjusting_counter = 0
-                            print("open loop adjusting left done")
+                            if last_command_char != "d":
+                                turn_right()
+                                last_command_char = "d"
+                            # print("open loop adjusting right done")
+                            print("last command char = ", last_command_char)
                     # if last_command_char != "a":
                     #     # global last_command_char
                     #     last_command_char = "a"
                     #     turn_left()
-                    print("only one color block")
+
             # waiting till the work done
             # time.sleep(last_command)
             # print(last_command)
