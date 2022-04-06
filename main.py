@@ -28,7 +28,7 @@ color_dist = {'red': {'Lower': np.array([160, 100, 150]), 'Upper': np.array([200
 
 video_width = 1920
 video_height = 1080
-centre = True
+centre = 0
 KNOWN_DISTANCE = 50
 KNOWN_WIDTH = 1.64
 global last_command_char
@@ -304,7 +304,7 @@ def is_highhalf(box):  # determine if the color block is in the higher half
 
 
 def is_parallel(dist1, dist2):  # determine if the two color blocks are parallel
-    if abs(dist1 - dist2) < 100:
+    if abs(dist1 - dist2) < 60:
         return True
     else:
         return False
@@ -315,13 +315,19 @@ def calculate_error(box_1, box_2):
     x1 = (box_1[0][0] + box_1[1][0] + box_1[2][0] + box_1[3][0]) / 4
     x2 = (box_2[0][0] + box_2[1][0] + box_2[2][0] + box_2[3][0]) / 4
     x_mean = (x1 + x2) / 2
-    if centre:
+    if centre == 0:
         return x_mean - video_width / 2
     else:
-        if abs(x2 - video_width/2) > abs(x1 - video_width/2):
-            return x2 - video_width / 2
-        else:
-            return x1 - video_width / 2
+        if centre == 1:
+            if x2 > x1:
+                return x2 - video_width / 2
+            else:
+                return x1 - video_width / 2
+        elif centre == 2:
+            if x2 < x1:  # x2 < x1
+                return x2 - video_width / 2
+            else:
+                return x1 - video_width / 2
 
 
 # function to determine if the two color blocks are on the edge
@@ -381,7 +387,7 @@ else:
     print(plist_0)
     serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
     serialFd = serial.Serial("COM11", 115200, timeout=0.1)  # define the serial
-    serial_imu = serial.Serial("COM9", 115200, timeout=0.5)
+    serial_imu = serial.Serial("COM7", 115200, timeout=0.5)
     print("serial name ", serialFd.name)
 
 # time.sleep(2)
@@ -467,7 +473,7 @@ def adjust_passing_gate():  # function for passing gates
     #     time.sleep(5)
     if last_command_char != "w":
         go_ahead()
-        time.sleep(10)
+        time.sleep(15)
         last_command_char = "w"
 
     print("adjust & passing")
@@ -607,27 +613,22 @@ def next_command(box_1, box_2):
     #     if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
     error = calculate_error(box_1, box_2)  # calculate the error
     if is_lefthalf(box_1) != is_lefthalf(box_2):
-        # centre = True
-        if error > 10:
+        if error > 20:
             print("right more")
             return "d"
             # turn_right()
-        elif error < -10:
+        elif error < -20:
             print("left more")
             # turn_left()
             return "a"
         else:
-            if centre:
-                print("neither too left nor too right")
-                return "w"
-            else:
-                go_ahead()
-                time.sleep(20)
-                return "w"
-                centre = True
+            print("neither too left nor too right")
+            return "w"
+
             # go_ahead()
     elif is_lefthalf(box_1) == 0 and is_lefthalf(box_2) == 0:
-        centre = False
+        centre = 2
+        print("centre = ", centre)
         print("both in left half")
         # if open_loop_adjusting_counter == 100:
         #     pure_cv_open_loop_adjusting(False)
@@ -635,7 +636,8 @@ def next_command(box_1, box_2):
         return "a"
         # turn_left()
     elif is_lefthalf(box_1) == 2 and is_lefthalf(box_2) == 2:
-        centre = False
+        centre = 1
+        print("centre = ", centre)
         print("both in right half")
         # if open_loop_adjusting_counter == 100:
         #     pure_cv_open_loop_adjusting(True)
@@ -738,6 +740,7 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 # print(cap.isOpened(), serialFd.isOpen())
 while cap.isOpened() and serialFd.isOpen():  # while the capture is open
+    # global
     ret, frame = cap.read()  # read ret and frame
     if ret:
         if frame is not None:  # have image
@@ -774,7 +777,7 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                     if cv2.contourArea(Max) < 100:  # if the first block is too small ignore it
                         # print("box1 too small ignored")
                         distance_1 = 0
-                # print("distance1 =", distance_1)
+                print("distance1 =", distance_1)
                 cv2.drawContours(frame, [np.int0(box1)], -1, (0, 255, 255), 2)
                 # print("box1 ==", box1)
                 # find the second_largest color block
@@ -799,7 +802,7 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                             # print("box2 too small ignored")
                             distance_2 = 0
                     cv2.drawContours(frame, [np.int0(box2)], -1, (255, 255, 255), 2)
-                    # print("distance2 =", distance_2)
+                    print("distance2 =", distance_2)
                     # print("box2 ==", box2)
             cv2.imshow('camera', frame)  # show the frame
             cv2.waitKey(1)  # let the frame wait
@@ -953,10 +956,14 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                             # open_loop_adjusting(True)
                             # pure_cv_open_loop_adjusting(True)
                             open_loop_adjusting_counter = 0
-                            if last_command_char != "a":
-                                turn_left()
-                                last_command_char = "a"
-
+                            if distance_1 > 150:
+                                if last_command_char != "a":
+                                    turn_left()
+                                    last_command_char = "a"
+                            else:
+                                if last_command_char != "d":
+                                    turn_right()
+                                    last_command_char = "d"
                                 # print("open loop adjusting left done")
                                 # print("last command char = ", last_command_char)
                         elif is_lefthalf(box1) == 2:
@@ -964,9 +971,14 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                             # open_loop_adjusting(False)
                             # pure_cv_open_loop_adjusting(False)
                             open_loop_adjusting_counter = 0
-                            if last_command_char != "d":
-                                turn_right()
-                                last_command_char = "d"
+                            if distance_1 > 150:
+                                if last_command_char != "d":
+                                    turn_right()
+                                    last_command_char = "d"
+                            else:
+                                if last_command_char != "a":
+                                    turn_left()
+                                    last_command_char = "a"
 
                             # print("open loop adjusting right done")
                             # print("last command char = ", last_command_char)
@@ -974,7 +986,6 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                     #     # global last_command_char
                     #     last_command_char = "a"
                     #     turn_left()
-
 
             # waiting till the work done
             # time.sleep(last_command)

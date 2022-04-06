@@ -5,8 +5,8 @@ color_dist = {'red': {'Lower': np.array([160, 120, 150]), 'Upper': np.array([200
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
               'green': {'Lower': np.array([30, 50, 160]), 'Upper': np.array([102, 130, 192])},
               }
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
-cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
+cap = cv2.VideoCapture(2, cv2.CAP_DSHOW)  # start video capture
+cv2.namedWindow('camera', cv2.WINDOW_NORMAL)  # open a window to show
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
@@ -54,7 +54,8 @@ while cap.isOpened():  # while the capture is open
             gs_frame = cv2.GaussianBlur(frame, (5, 5), 0)  # using GaussianBlur
             hsv = cv2.cvtColor(gs_frame, cv2.COLOR_BGR2HSV)  # From BGR to HSV
             erode_hsv = cv2.erode(hsv, None, iterations=2)  # erode to reduce noise
-            in_range_hsv = cv2.inRange(erode_hsv, lower, upper)  ## color_dist[ball_color]['Lower'], color_dist[ball_color]['Upper'])
+            in_range_hsv = cv2.inRange(erode_hsv, lower, upper)  ## color_dist[ball_color]['Lower'],
+            # color_dist[ball_color]['Upper'])
             # delete backgrounds
             cnt_s = cv2.findContours(in_range_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
             if len(cnt_s) != 0:
