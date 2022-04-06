@@ -16,6 +16,7 @@ int Pin10 = 10;
 int Pin11 = 11;
 int Pin12 = 12;
 int Pin13 = 13;
+char stringBuffer[128];
 
 int Pin14 = 33;
 int Pin15 = 32;
@@ -64,6 +65,7 @@ void setup()
 
 void loop()
 {
+  Serial.readBytes(stringBuffer, Serial.available()-1);
   char Command = Serial.read();
   switch (Command) {
     case 'w' :
@@ -112,7 +114,6 @@ void loop()
           break;
       }
   }
-//turnLeft(1000);
 }
 void goAhead(int time1) {
   digitalWrite(Pin14, LOW);
