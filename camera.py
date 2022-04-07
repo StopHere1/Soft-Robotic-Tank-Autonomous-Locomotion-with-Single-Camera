@@ -5,7 +5,7 @@ color_dist = {'red': {'Lower': np.array([160, 120, 150]), 'Upper': np.array([200
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
               'green': {'Lower': np.array([30, 50, 160]), 'Upper': np.array([102, 130, 192])},
               }
-cap = cv2.VideoCapture(2, cv2.CAP_DSHOW)  # start video capture
+cap = cv2.VideoCapture(2, cv2.CAP_ANY)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_NORMAL)  # open a window to show
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
@@ -17,11 +17,11 @@ def empty(a):
 
 cv2.namedWindow("HSV")
 cv2.resizeWindow("HSV", 640, 300)
-cv2.createTrackbar("HUE Min", "HSV", 160, 179, empty)
-cv2.createTrackbar("SAT Min", "HSV", 100, 255, empty)
-cv2.createTrackbar("VALUE Min", "HSV", 150, 255, empty)
-cv2.createTrackbar("HUE Max", "HSV", 200, 179, empty)
-cv2.createTrackbar("SAT Max", "HSV", 200, 255, empty)
+cv2.createTrackbar("HUE Min", "HSV", 35, 179, empty)
+cv2.createTrackbar("SAT Min", "HSV", 43, 255, empty)
+cv2.createTrackbar("VALUE Min", "HSV", 117, 255, empty)
+cv2.createTrackbar("HUE Max", "HSV", 77, 179, empty)
+cv2.createTrackbar("SAT Max", "HSV", 255, 255, empty)
 cv2.createTrackbar("VALUE Max", "HSV", 255, 255, empty)
 
 

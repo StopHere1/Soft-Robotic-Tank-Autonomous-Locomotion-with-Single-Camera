@@ -65,7 +65,9 @@ void setup()
 
 void loop()
 {
+  if (Serial.available() > 1){
   Serial.readBytes(stringBuffer, Serial.available()-1);
+  }
   char Command = Serial.read();
   switch (Command) {
     case 'w' :

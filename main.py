@@ -20,11 +20,11 @@ from pynput import keyboard
 
 ball_color = 'green'  # choose color to recognize
 color_dist = {'red': {'Lower': np.array([160, 100, 150]), 'Upper': np.array([200, 200, 255])},
-              'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
-              'green': {'Lower': np.array([35, 43, 117]), 'Upper': np.array([77, 255, 255])},
+              'green': {'Lower': np.array([48, 63, 84]), 'Upper': np.array([77, 255, 255])},
 
               }  # define the exact bound for each color
 # 35 77 43 255 46 255
+# 'green': {'Lower': np.array([35, 43, 117]), 'Upper': np.array([77, 255, 255])},
 
 video_width = 1920
 video_height = 1080
@@ -268,6 +268,7 @@ def distance_to_camera(known_width, focal_length, per_width):  # function to get
 
 
 def is_lefthalf(box):  # determine if the color block is in the left half
+    global centre
     box = np.int0(box)
     most_right = 0
     most_left = video_width
@@ -277,12 +278,22 @@ def is_lefthalf(box):  # determine if the color block is in the left half
             most_right = box[k][0]
         if box[k][0] <= most_left:
             most_left = box[k][0]
-
-    if most_right < video_width / 2:
-        return 0
-    elif most_left > video_width / 2:
-        return 2
-    return 1
+    if centre == 0:
+        if most_right < video_width / 2:
+            return 0
+        elif most_left > video_width / 2:
+            return 2
+        return 1
+    elif centre == 1:
+        if most_right < video_width / 5:
+            return 0
+        else:
+            return 2
+    elif centre == 2:
+        if most_left > 4 * video_width / 5:
+            return 2
+        else:
+            return 0
 
 
 def is_highhalf(box):  # determine if the color block is in the higher half
@@ -304,7 +315,7 @@ def is_highhalf(box):  # determine if the color block is in the higher half
 
 
 def is_parallel(dist1, dist2):  # determine if the two color blocks are parallel
-    if abs(dist1 - dist2) < 60:
+    if abs(dist1 - dist2) < 80:
         return True
     else:
         return False
@@ -320,14 +331,14 @@ def calculate_error(box_1, box_2):
     else:
         if centre == 1:
             if x2 > x1:
-                return x2 - video_width / 2
+                return x2 - video_width / 3
             else:
-                return x1 - video_width / 2
+                return x1 - video_width / 3
         elif centre == 2:
             if x2 < x1:  # x2 < x1
-                return x2 - video_width / 2
+                return x2 - 2 * video_width / 3
             else:
-                return x1 - video_width / 2
+                return x1 - 2 * video_width / 3
 
 
 # function to determine if the two color blocks are on the edge
@@ -613,11 +624,11 @@ def next_command(box_1, box_2):
     #     if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
     error = calculate_error(box_1, box_2)  # calculate the error
     if is_lefthalf(box_1) != is_lefthalf(box_2):
-        if error > 20:
+        if error > 10:
             print("right more")
             return "d"
             # turn_right()
-        elif error < -20:
+        elif error < -10:
             print("left more")
             # turn_left()
             return "a"
@@ -626,7 +637,7 @@ def next_command(box_1, box_2):
             return "w"
 
             # go_ahead()
-    elif is_lefthalf(box_1) == 0 and is_lefthalf(box_2) == 0:
+    elif is_lefthalf(box_1) == 0 and is_lefthalf(box_2) == 0 and centre == 0:
         centre = 2
         print("centre = ", centre)
         print("both in left half")
@@ -635,7 +646,7 @@ def next_command(box_1, box_2):
         #     open_loop_adjusting_counter == 0
         return "a"
         # turn_left()
-    elif is_lefthalf(box_1) == 2 and is_lefthalf(box_2) == 2:
+    elif is_lefthalf(box_1) == 2 and is_lefthalf(box_2) == 2 and centre == 0:
         centre = 1
         print("centre = ", centre)
         print("both in right half")
@@ -663,6 +674,7 @@ def next_command(box_1, box_2):
 #             box2[3][1]:
 #         return False
 #     return True
+
 
 def compare_boxes(box1, box2):
     box1 = np.int0(box1)
@@ -734,7 +746,7 @@ time.sleep(5)
 print("middle finished")
 # pure_cv_open_loop_adjusting(True)
 open_loop_adjusting_counter = 0
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
+cap = cv2.VideoCapture(0, cv2.CAP_ANY)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_NORMAL)  # open a window to show
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
@@ -774,7 +786,7 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                     else:
                         inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_1[1][1])
                         distance_1 = inches * 2.4
-                    if cv2.contourArea(Max) < 100:  # if the first block is too small ignore it
+                    if cv2.contourArea(Max) < 200:  # if the first block is too small ignore it
                         # print("box1 too small ignored")
                         distance_1 = 0
                 print("distance1 =", distance_1)
@@ -798,7 +810,7 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                         else:
                             inches = distance_to_camera(KNOWN_WIDTH, focalLength, rect_2[1][1])
                             distance_2 = inches * 2.4
-                        if cv2.contourArea(secondMax) < 100:  # if the first block is too small ignore it
+                        if cv2.contourArea(secondMax) < 200:  # if the first block is too small ignore it
                             # print("box2 too small ignored")
                             distance_2 = 0
                     cv2.drawContours(frame, [np.int0(box2)], -1, (255, 255, 255), 2)
@@ -813,101 +825,128 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                 #     print("box1 box2 on edge")
                 #     adjust_passing_gate()
                 # else:
-                if is_parallel(distance_1, distance_2):
-                    # print("parallel")
-                    # global open_loop_adjusting_counter
-                    # open_loop_adjusting_counter = 0
-                    if (on_edge2(box1) and on_edge1(box2)) or (on_edge2(box2) and on_edge1(box1)):
-                        adjust_passing_gate()
-                        # print("both on edge")
-                    elif on_edge1(box1) or on_edge2(box1):
-                        # print("box1 on edge")
-                        if on_edge1(box1):
-                            if last_command_char != "d":
-                                turn_right()
-                                last_command_char = "d"
-                            # command_array[command_counter] = "d"
-                            # command_counter = command_counter + 1
-                        else:
-                            if last_command_char != "a":
-                                turn_left()
-                                last_command_char = "a"
-                            # command_array[command_counter] = "a"
-                            # command_counter = command_counter + 1
-                    elif on_edge1(box2) or on_edge2(box2):
-                        # print("box2 on edge")
-                        if on_edge1(box2):
-                            if last_command_char != "d":
-                                turn_right()
-                                last_command_char = "d"
-                            # command_array[command_counter] = "d"
-                            # command_counter = command_counter + 1
-                        else:
-                            if last_command_char != "a":
-                                turn_left()
-                                last_command_char = "a"
-                            # command_array[command_counter] = "a"
-                            # command_counter = command_counter + 1
-                    else:
-                        if last_command_char != next_command(box1, box2):
-                            # print("last command char = ", last_command_char)
-                            dec = next_command(box1, box2)
-                            # global last_command_char
-                            # last_command_char = next_command(box1, box2)
-                            # print("last command char changed = ", last_command_char)
-                            if dec == "w":
-                                go_ahead()
-                                # # print("print w")
-                                last_command_char = "w"
-                                # command_array[command_counter] = "w"
-                                # command_counter = command_counter + 1
-                            elif dec == "a":
-                                turn_left()
-                                # # if open_loop_adjusting_counter == 100:
-                                # #     pure_cv_open_loop_adjusting(False)
-                                # #     open_loop_adjusting_counter == 0
-                                last_command_char = "a"
-                                # command_array[command_counter] = "a"
-                                # command_counter = command_counter + 1
-                            elif dec == "d":
-                                turn_right()
-                                # # if open_loop_adjusting_counter == 100:
-                                # #     pure_cv_open_loop_adjusting(True)
-                                # #     open_loop_adjusting_counter == 0
-                                last_command_char = "d"
+                if centre == 0:
+                    if is_parallel(distance_1, distance_2):
+                        print("parallel")
+                        # global open_loop_adjusting_counter
+                        # open_loop_adjusting_counter = 0
+                        if (on_edge2(box1) and on_edge1(box2)) or (on_edge2(box2) and on_edge1(box1)):
+                            adjust_passing_gate()
+                            print("both on edge")
+                        elif on_edge1(box1) or on_edge2(box1):
+                            print("box1 on edge")
+                            if on_edge1(box1):
+                                if last_command_char != "d":
+                                    turn_right()
+                                    last_command_char = "d"
                                 # command_array[command_counter] = "d"
                                 # command_counter = command_counter + 1
-                            # time.sleep(0.1)
-                        # print("Using next command")
-                else:
-                    # print("not parallel")
-                    # global open_loop_adjusting_counter
-                    # open_loop_adjusting_counter = open_loop_adjusting_counter + 1
-                    # if open_loop_adjusting_counter == 150:
-                    if is_lefthalf(box1) == 0:
-                        # open_loop_adjusting(True)
-                        # pure_cv_open_loop_adjusting(True)
-                        # print("last command char = ", last_command_char)
-                        if last_command_char != "a":
-                            turn_left()
-                            last_command_char = "a"
-                        # command_array[command_counter] = "a"
-                        # command_counter = command_counter + 1
+                            else:
+                                if last_command_char != "a":
+                                    turn_left()
+                                    last_command_char = "a"
+                                # command_array[command_counter] = "a"
+                                # command_counter = command_counter + 1
+                        elif on_edge1(box2) or on_edge2(box2):
+                            print("box2 on edge")
+                            if on_edge1(box2):
+                                if last_command_char != "d":
+                                    turn_right()
+                                    last_command_char = "d"
+                                # command_array[command_counter] = "d"
+                                # command_counter = command_counter + 1
+                            else:
+                                if last_command_char != "a":
+                                    turn_left()
+                                    last_command_char = "a"
+                                # command_array[command_counter] = "a"
+                                # command_counter = command_counter + 1
+                        else:
+                            bug_king = next_command(box1, box2)
+                            if last_command_char != bug_king:
+                                # print("last command char = ", last_command_char)
+                                # global last_command_char
+                                # last_command_char = next_command(box1, box2)
+                                # print("last command char changed = ", last_command_char)
+                                if bug_king == "w":
+                                    go_ahead()
+                                    # # print("print w")
+                                    last_command_char = "w"
+                                    # command_array[command_counter] = "w"
+                                    # command_counter = command_counter + 1
+                                elif bug_king == "a":
+                                    turn_left()
+                                    # # if open_loop_adjusting_counter == 100:
+                                    # #     pure_cv_open_loop_adjusting(False)
+                                    # #     open_loop_adjusting_counter == 0
+                                    last_command_char = "a"
+                                    # command_array[command_counter] = "a"
+                                    # command_counter = command_counter + 1
+                                elif bug_king == "d":
+                                    turn_right()
+                                    # # if open_loop_adjusting_counter == 100:
+                                    # #     pure_cv_open_loop_adjusting(True)
+                                    # #     open_loop_adjusting_counter == 0
+                                    last_command_char = "d"
+                                    # command_array[command_counter] = "d"
+                                    # command_counter = command_counter + 1
+                                # time.sleep(0.1)
+                            print("Using next command")
+                    else:
+                        print("not parallel")
+                        # global open_loop_adjusting_counter
+                        # open_loop_adjusting_counter = open_loop_adjusting_counter + 1
+                        # if open_loop_adjusting_counter == 150:
+                        if is_lefthalf(box1) == 0 and centre == 0:
+                            # open_loop_adjusting(True)
+                            # pure_cv_open_loop_adjusting(True)
+                            # print("last command char = ", last_command_char)
+                            if last_command_char != "a":
+                                turn_left()
+                                last_command_char = "a"
+                            # command_array[command_counter] = "a"
+                            # command_counter = command_counter + 1
+                                # print("last command char changed = ", last_command_char)
+                                print("in left half")
+                            # open_loop_adjusting_counter = 0
+                        elif is_lefthalf(box1) == 2 and centre == 0:
+                            # open_loop_adjusting(False)
+                            # pure_cv_open_loop_adjusting(False)
+                            # print("last command char= ", last_command_char)
+                            if last_command_char != "d":
+                                turn_right()
+                                last_command_char = "d"
+                            # command_array[command_counter] = "d"
+                            # command_counter = command_counter + 1
                             # print("last command char changed = ", last_command_char)
-                            # print("in left half")
-                        # open_loop_adjusting_counter = 0
-                    elif is_lefthalf(box1) == 2:
-                        # open_loop_adjusting(False)
-                        # pure_cv_open_loop_adjusting(False)
-                        # print("last command char= ", last_command_char)
-                        if last_command_char != "d":
+                            print("in right half")
+                else:
+                    if (on_edge2(box1) and on_edge1(box2)) or (on_edge2(box2) and on_edge1(box1)):
+                        adjust_passing_gate()
+                        print("both on edge")
+                        centre = 0
+                        print("centre = 0")
+                    bug_king = next_command(box1, box2)
+                    if last_command_char != bug_king:
+                        # print("last command char = ", last_command_char)
+                        # global last_command_char
+                        # last_command_char = next_command(box1, box2)
+                        # print("last command char changed = ", last_command_char)
+                        if bug_king == "w":
+                            go_ahead()
+                            # # print("print w")
+                            last_command_char = "w"
+                            # command_array[command_counter] = "w"
+                            # command_counter = command_counter + 1
+                        elif bug_king == "a":
+                            turn_left()
+                            # # if open_loop_adjusting_counter == 100:
+                            # #     pure_cv_open_loop_adjusting(False)
+                            # #     open_loop_adjusting_counter == 0
+                            last_command_char = "a"
+                        elif bug_king == "d":
                             turn_right()
                             last_command_char = "d"
-                        # command_array[command_counter] = "d"
-                        # command_counter = command_counter + 1
-                            # print("last command char changed = ", last_command_char)
-                            # print("in right half")
-                        open_loop_adjusting_counter = 0
             elif distance_1 == 0 and distance_2 == 0:
                 # global open_loop_adjusting_counter
                 open_loop_adjusting_counter = 0
@@ -926,37 +965,44 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                 #         last_command_char = "a"
                 #         turn_left()
                 #         print("IMU Right")
-
-                if last_command_char != "w":
-                    go_ahead()
-                    last_command_char = "w"
-
+                if centre == 0:
+                    if last_command_char != "w":
+                        go_ahead()
+                        last_command_char = "w"
+                elif centre == 1:
+                    if last_command_char != "a":
+                        turn_left()
+                        last_command_char = "a"
+                elif centre == 2:
+                    if last_command_char != "d":
+                        turn_right()
+                        last_command_char = "d"
                 # command_array[command_counter] = "w"
                 # command_counter = command_counter + 1
                     # print("last command char = ", last_command_char)
                 # print("did not find color blocks")
             else:
                 if distance_1 != 0:
-                    # print("only one color block")
+                    print("only one color block")
                     # turn_left()
                     # global open_loop_adjusting_counter
                     if on_edge1(box1):
-                        # print("on edge")
+                        print("on edge")
                         go_ahead()
                         time.sleep(10)
                         if last_command_char != "w":
                             last_command_char = "w"
                         # print("last command char changed = ", last_command_char)
                     else:
-                        # print("not on edge")
+                        print("not on edge")
                         # open_loop_adjusting_counter = open_loop_adjusting_counter + 1
                         # if open_loop_adjusting_counter == 150:
                         if is_lefthalf(box1) == 0:
-                            # print("left")
+                            print("left")
                             # open_loop_adjusting(True)
                             # pure_cv_open_loop_adjusting(True)
                             open_loop_adjusting_counter = 0
-                            if distance_1 > 150:
+                            if distance_1 > 160:
                                 if last_command_char != "a":
                                     turn_left()
                                     last_command_char = "a"
@@ -964,14 +1010,17 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                                 if last_command_char != "d":
                                     turn_right()
                                     last_command_char = "d"
+                                # centre = 0
+                                # print("centre = 0")
+
                                 # print("open loop adjusting left done")
                                 # print("last command char = ", last_command_char)
                         elif is_lefthalf(box1) == 2:
-                            # print("right")
+                            print("right")
                             # open_loop_adjusting(False)
                             # pure_cv_open_loop_adjusting(False)
                             open_loop_adjusting_counter = 0
-                            if distance_1 > 150:
+                            if distance_1 > 160:
                                 if last_command_char != "d":
                                     turn_right()
                                     last_command_char = "d"
@@ -979,6 +1028,26 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                                 if last_command_char != "a":
                                     turn_left()
                                     last_command_char = "a"
+                                # centre = 0
+                                # print("centre = 0")
+                        elif is_lefthalf(box1) == 1:
+                            if distance_1 > 160:
+                                if last_command_char != "w":
+                                    go_ahead()
+                                    last_command_char = "w"
+                            else:
+                                if centre == 1:
+                                    if last_command_char != "a":
+                                        turn_left()
+                                        last_command_char = "a"
+                                elif centre == 2:
+                                    if last_command_char != "d":
+                                        turn_right()
+                                        last_command_char = "d"
+                                elif centre == 0:
+                                    print("G")
+                                # centre = 0
+                                # print("centre = 0")
 
                             # print("open loop adjusting right done")
                             # print("last command char = ", last_command_char)
