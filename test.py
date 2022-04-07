@@ -711,7 +711,7 @@ time.sleep(2)
 print("middle finished")
 # pure_cv_open_loop_adjusting(True)
 open_loop_adjusting_counter = 0
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # start video capture
+cap = cv2.VideoCapture(2, cv2.CAP_ANY)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_AUTOSIZE)  # open a window to show
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
