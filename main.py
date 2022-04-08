@@ -5,14 +5,14 @@ import serial.tools.list_ports
 import time
 from pynput import keyboard
 
-ball_color = 'red'  # choose color to recognize
+ball_color = 'green'  # choose color to recognize
 color_dist = {'red': {'Lower': np.array([160, 100, 150]), 'Upper': np.array([200, 255, 255])},
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
               'green': {'Lower': np.array([48, 63, 84]), 'Upper': np.array([77, 255, 255])},
               }  # define the exact bound for each color
 # 35 77 43 255 46 255
 # 'green': {'Lower': np.array([35, 43, 117]), 'Upper': np.array([77, 255, 255])},
-no_block_counter = 300
+no_block_counter = 0
 video_width = 1920
 video_height = 1080
 centre = 0
@@ -298,16 +298,7 @@ def is_in_outerlefthalf(box):  # determine if the color block is in the left hal
         elif most_left > 2 * video_width / 3:
             return 2
         return 1
-    # elif centre == 1:
-    #     if most_right < video_width / 5:
-    #         return 0
-    #     else:
-    #         return 2
-    # elif centre == 2:
-    #     if most_left > 4 * video_width / 5:
-    #         return 2
-    #     else:
-    #         return 0
+
 
 
 def is_highhalf(box):  # determine if the color block is in the higher half
@@ -529,73 +520,6 @@ def on_release(key):
         return False
 
 
-# def open_loop_adjusting(flag):
-#     go_ahead()
-#     time.sleep(5)
-#
-#     serial_imu.flushInput()
-#     data_hex_function = serial_imu.read(33)
-#     angle_z_function = DueData(data_hex_function)
-#     if flag:
-#         turn_right()
-#         while 90 + angle_z_function > 0.2:
-#             serial_imu.flushInput()
-#             data_hex_function = serial_imu.read(33)
-#             angle_z_function = DueData(data_hex_function)
-#         print("turning right done")
-#         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-#         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-#         # time.sleep(1)
-#         go_ahead()
-#         time.sleep(1)
-#
-#         serial_imu.flushInput()
-#         data_hex_function = serial_imu.read(33)
-#         angle_z_function = DueData(data_hex_function)
-#         turn_left()
-#         while 90 - angle_z_function > 0.2:
-#             serial_imu.flushInput()
-#             data_hex_function = serial_imu.read(33)
-#             angle_z_function = DueData(data_hex_function)
-#         print("turning left done")
-#         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-#         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-#         go_ahead()
-#         time.sleep(1)
-#         global last_command_char
-#         last_command_char = "w"
-#     else:
-#         turn_left()
-#         while 90 - angle_z_function > 0.2:
-#             serial_imu.flushInput()
-#             data_hex_function = serial_imu.read(33)
-#             angle_z_function = DueData(data_hex_function)
-#
-#         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-#         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-#         print("turning left done")
-#         go_ahead()
-#         time.sleep(1)
-#
-#         serial_imu.flushInput()
-#         data_hex_function = serial_imu.read(33)
-#         angle_z_function = DueData(data_hex_function)
-#         turn_right()
-#         while 90 + angle_z_function > 0.2:
-#             serial_imu.flushInput()
-#             data_hex_function = serial_imu.read(33)
-#             angle_z_function = DueData(data_hex_function)
-#
-#         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-#         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-#         print("turning right done")
-#         # time.sleep(1)
-#         # global last_command_char
-#         go_ahead()
-#         time.sleep(1)
-#         last_command_char = "w"
-
-
 def pure_cv_open_loop_adjusting(flag1):
     global last_command_char
     go_ahead()
@@ -676,14 +600,15 @@ def find_center(box):
     return (box[0][0] + box[1][0] + box[2][0] + box[3][0]) / 4
 
 
-keyboard_listener()
+# keyboard_listener()
 # code for going rapidly without camera
 
 # using camera below
 pump()
 time.sleep(1)
 # go_ahead()
-# time.sleep(120)
+# time.sleep(110)
+
 if ball_color == 'green':
     cap = cv2.VideoCapture(0)
     cv2.namedWindow('camera', cv2.WINDOW_NORMAL)  # open a window to show
@@ -696,6 +621,7 @@ last_command_char = "g"
 time.sleep(5)
 print("middle finished")
 if ball_color == 'green':
+    print("Green")
     while cap.isOpened() and serialFd.isOpen():  # while the capture is open
         ret, frame = cap.read()  # read ret and frame
         if ret:
@@ -884,8 +810,6 @@ if ball_color == 'green':
                             # if open_loop_adjusting_counter == 150:
                             if is_lefthalf(box1) == 0:
                                 print("left")
-
-                                open_loop_adjusting_counter = 0
                                 if distance_1 > 160:
                                     if last_command_char != "a":
                                         turn_left()
@@ -936,7 +860,7 @@ if ball_color == 'green':
     cv2.destroyAllWindows()
     # time.sleep(1)
 
-os.system('test.py')
+# os.system('test.py')
 cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
 cv2.namedWindow('camera2', cv2.WINDOW_NORMAL)  # open a window to show
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)

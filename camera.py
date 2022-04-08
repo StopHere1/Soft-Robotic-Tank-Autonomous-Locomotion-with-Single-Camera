@@ -5,7 +5,7 @@ color_dist = {'red': {'Lower': np.array([160, 100, 150]), 'Upper': np.array([200
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
               'green': {'Lower': np.array([30, 50, 160]), 'Upper': np.array([102, 130, 192])},
               }
-cap = cv2.VideoCapture(2, cv2.CAP_ANY)  # start video capture
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
 cv2.namedWindow('camera', cv2.WINDOW_NORMAL)  # open a window to show
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
