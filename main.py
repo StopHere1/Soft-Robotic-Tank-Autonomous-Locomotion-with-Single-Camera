@@ -1,12 +1,11 @@
+import os
 import numpy as np
 import cv2
-import serial
 import serial.tools.list_ports
 import time
-import _thread
 from pynput import keyboard
 
-ball_color = 'green'  # choose color to recognize
+ball_color = 'red'  # choose color to recognize
 color_dist = {'red': {'Lower': np.array([160, 100, 150]), 'Upper': np.array([200, 255, 255])},
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
               'green': {'Lower': np.array([48, 63, 84]), 'Upper': np.array([77, 255, 255])},
@@ -337,12 +336,27 @@ def is_parallel(dist1, dist2):  # determine if the two color blocks are parallel
 
 
 # function to get the distance between the middle point of color blocks and the center of the picture
-def calculate_error(box_1, box_2):
+def calculate_error(distance_1, distance_2, box_1, box_2):
     x1 = (box_1[0][0] + box_1[1][0] + box_1[2][0] + box_1[3][0]) / 4
     x2 = (box_2[0][0] + box_2[1][0] + box_2[2][0] + box_2[3][0]) / 4
     x_mean = (x1 + x2) / 2
     if centre == 0:
-        return x_mean - video_width / 2
+        if distance_1 - distance_2 > 30:
+            if is_lefthalf(box_1) == 0:
+                return x_mean - 2 * video_width / 3
+            elif is_lefthalf(box_1) == 2:
+                return x_mean - video_width / 3
+            elif is_lefthalf(box_1) == 1:
+                return 0
+        elif distance_2 - distance_1 > 30:
+            if is_lefthalf(box_2) == 0:
+                return x_mean - 2 * video_width / 3
+            elif is_lefthalf(box_2) == 2:
+                return x_mean - video_width / 3
+            elif is_lefthalf(box_2) == 1:
+                return 0
+        else:
+            return x_mean - video_width / 2
     else:
         if centre == 1:
             if x2 > x1:
@@ -409,20 +423,15 @@ if len(plist) <= 0:
     print("no serial")
 else:
     plist_0 = list(plist[0])
-    plist_1 = list(plist[1])
+    # plist_1 = list(plist[1])
     print(plist_0)
     serialName = plist_0[0]  # plist_0[0] choose according to arduino ide
     serialFd = serial.Serial("COM11", 115200, timeout=0.1)  # define the serial
-    serial_imu = serial.Serial("COM7", 115200, timeout=0.5)
+    # serial_imu = serial.Serial("COM7", 115200, timeout=0.5)
     print("serial name ", serialFd.name)
 
 # time.sleep(2)
 # Code for sending commands starts here
-
-
-serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-time.sleep(3)
 
 
 def go_ahead():  # 3.5cm per cycle when last_command = 2 s
@@ -520,71 +529,71 @@ def on_release(key):
         return False
 
 
-def open_loop_adjusting(flag):
-    go_ahead()
-    time.sleep(5)
-
-    serial_imu.flushInput()
-    data_hex_function = serial_imu.read(33)
-    angle_z_function = DueData(data_hex_function)
-    if flag:
-        turn_right()
-        while 90 + angle_z_function > 0.2:
-            serial_imu.flushInput()
-            data_hex_function = serial_imu.read(33)
-            angle_z_function = DueData(data_hex_function)
-        print("turning right done")
-        serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-        serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-        # time.sleep(1)
-        go_ahead()
-        time.sleep(1)
-
-        serial_imu.flushInput()
-        data_hex_function = serial_imu.read(33)
-        angle_z_function = DueData(data_hex_function)
-        turn_left()
-        while 90 - angle_z_function > 0.2:
-            serial_imu.flushInput()
-            data_hex_function = serial_imu.read(33)
-            angle_z_function = DueData(data_hex_function)
-        print("turning left done")
-        serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-        serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-        go_ahead()
-        time.sleep(1)
-        global last_command_char
-        last_command_char = "w"
-    else:
-        turn_left()
-        while 90 - angle_z_function > 0.2:
-            serial_imu.flushInput()
-            data_hex_function = serial_imu.read(33)
-            angle_z_function = DueData(data_hex_function)
-
-        serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-        serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-        print("turning left done")
-        go_ahead()
-        time.sleep(1)
-
-        serial_imu.flushInput()
-        data_hex_function = serial_imu.read(33)
-        angle_z_function = DueData(data_hex_function)
-        turn_right()
-        while 90 + angle_z_function > 0.2:
-            serial_imu.flushInput()
-            data_hex_function = serial_imu.read(33)
-            angle_z_function = DueData(data_hex_function)
-
-        serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
-        serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
-        print("turning right done")
-        # time.sleep(1)
-        # global last_command_char
-        go_ahead()
-        time.sleep(1)
-        last_command_char = "w"
+# def open_loop_adjusting(flag):
+#     go_ahead()
+#     time.sleep(5)
+#
+#     serial_imu.flushInput()
+#     data_hex_function = serial_imu.read(33)
+#     angle_z_function = DueData(data_hex_function)
+#     if flag:
+#         turn_right()
+#         while 90 + angle_z_function > 0.2:
+#             serial_imu.flushInput()
+#             data_hex_function = serial_imu.read(33)
+#             angle_z_function = DueData(data_hex_function)
+#         print("turning right done")
+#         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
+#         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+#         # time.sleep(1)
+#         go_ahead()
+#         time.sleep(1)
+#
+#         serial_imu.flushInput()
+#         data_hex_function = serial_imu.read(33)
+#         angle_z_function = DueData(data_hex_function)
+#         turn_left()
+#         while 90 - angle_z_function > 0.2:
+#             serial_imu.flushInput()
+#             data_hex_function = serial_imu.read(33)
+#             angle_z_function = DueData(data_hex_function)
+#         print("turning left done")
+#         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
+#         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+#         go_ahead()
+#         time.sleep(1)
+#         global last_command_char
+#         last_command_char = "w"
+#     else:
+#         turn_left()
+#         while 90 - angle_z_function > 0.2:
+#             serial_imu.flushInput()
+#             data_hex_function = serial_imu.read(33)
+#             angle_z_function = DueData(data_hex_function)
+#
+#         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
+#         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+#         print("turning left done")
+#         go_ahead()
+#         time.sleep(1)
+#
+#         serial_imu.flushInput()
+#         data_hex_function = serial_imu.read(33)
+#         angle_z_function = DueData(data_hex_function)
+#         turn_right()
+#         while 90 + angle_z_function > 0.2:
+#             serial_imu.flushInput()
+#             data_hex_function = serial_imu.read(33)
+#             angle_z_function = DueData(data_hex_function)
+#
+#         serial_imu.write(bytearray([0xFF, 0xAA, 0x67]))
+#         serial_imu.write(bytearray([0xFF, 0xAA, 0x52]))
+#         print("turning right done")
+#         # time.sleep(1)
+#         # global last_command_char
+#         go_ahead()
+#         time.sleep(1)
+#         last_command_char = "w"
 
 
 def pure_cv_open_loop_adjusting(flag1):
@@ -612,11 +621,11 @@ def pure_cv_open_loop_adjusting(flag1):
 
 
 # function to send the next command
-def next_command(box_1, box_2):
+def next_command(dist_1, dist_2, box_1, box_2):
     global centre
     # if not on_edge(box_1, box_2):  # if the two color blocks are on the edges
     #     if is_parallel(dist_1, dist_2):  # if the two color blocks are from the same gate
-    error = calculate_error(box_1, box_2)  # calculate the error
+    error = calculate_error(dist_1, dist_2, box_1, box_2)  # calculate the error
     if is_lefthalf(box_1) != is_lefthalf(box_2):
         if error > 10:
             print("right more")
@@ -667,18 +676,19 @@ def find_center(box):
     return (box[0][0] + box[1][0] + box[2][0] + box[3][0]) / 4
 
 
-# keyboard_listener()
+keyboard_listener()
 # code for going rapidly without camera
 
 # using camera below
 pump()
 time.sleep(1)
-go_ahead()
-time.sleep(125)
-cap = cv2.VideoCapture(0)
-cv2.namedWindow('camera', cv2.WINDOW_NORMAL)  # open a window to show
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+# go_ahead()
+# time.sleep(120)
+if ball_color == 'green':
+    cap = cv2.VideoCapture(0)
+    cv2.namedWindow('camera', cv2.WINDOW_NORMAL)  # open a window to show
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 # start video capture
 #  switching to camera control
 middle()
@@ -772,7 +782,7 @@ if ball_color == 'green':
                                         turn_left()
                                         last_command_char = "a"
                             else:
-                                bug_king = next_command(box1, box2)
+                                bug_king = next_command(distance_1, distance_2, box1, box2)
                                 if last_command_char != bug_king:
                                     if bug_king == "w":
                                         go_ahead()
@@ -794,19 +804,25 @@ if ball_color == 'green':
                             print("not parallel")
 
                             if is_lefthalf(box1) == 0 and centre == 0:
-
-                                if last_command_char != "a":
-                                    turn_left()
-                                    last_command_char = "a"
-
+                                if distance_1 > 160:
+                                    if last_command_char != "a":
+                                        turn_left()
+                                        last_command_char = "a"
+                                else:
+                                    if last_command_char != "d":
+                                        turn_right()
+                                        last_command_char = "d"
                                     print("in left half")
 
                             elif is_lefthalf(box1) == 2 and centre == 0:
-
-                                if last_command_char != "d":
-                                    turn_right()
-                                    last_command_char = "d"
-
+                                if distance_1 > 160:
+                                    if last_command_char != "d":
+                                        turn_right()
+                                        last_command_char = "d"
+                                else:
+                                    if last_command_char != "a":
+                                        turn_left()
+                                        last_command_char = "a"
                                 print("in right half")
                     else:
                         if (on_edge2(box1) and on_edge1(box2)) or (on_edge2(box2) and on_edge1(box1)):
@@ -814,7 +830,7 @@ if ball_color == 'green':
                             print("both on edge")
                             centre = 0
                             print("centre = 0")
-                        bug_king = next_command(box1, box2)
+                        bug_king = next_command(distance_1, distance_2, box1, box2)
                         if last_command_char != bug_king:
 
                             if bug_king == "w":
@@ -916,12 +932,13 @@ if ball_color == 'green':
             print("No access to camera")
 
     cap.release()
-    cv2.waitKey(0)
+    # cv2.waitKey(0)
     cv2.destroyAllWindows()
     # time.sleep(1)
 
-cap = cv2.VideoCapture(2, cv2.CAP_ANY)  # start video capture
-cv2.namedWindow('camera', cv2.WINDOW_NORMAL)  # open a window to show
+os.system('test.py')
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # start video capture
+cv2.namedWindow('camera2', cv2.WINDOW_NORMAL)  # open a window to show
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 # print(cap.isOpened(), serialFd.isOpen())
