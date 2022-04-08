@@ -5,7 +5,7 @@ import serial.tools.list_ports
 import time
 from pynput import keyboard
 
-ball_color = 'green'  # choose color to recognize
+ball_color = 'red'  # choose color to recognize
 color_dist = {'red': {'Lower': np.array([160, 100, 150]), 'Upper': np.array([200, 255, 255])},
               'blue': {'Lower': np.array([100, 80, 46]), 'Upper': np.array([124, 255, 255])},
               'green': {'Lower': np.array([48, 63, 84]), 'Upper': np.array([77, 255, 255])},
@@ -607,7 +607,7 @@ def find_center(box):
 pump()
 time.sleep(1)
 # go_ahead()
-# time.sleep(110)
+# time.sleep(107)
 
 if ball_color == 'green':
     cap = cv2.VideoCapture(0)
@@ -877,13 +877,6 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
             in_range_hsv = cv2.inRange(erode_hsv, color_dist[ball_color]['Lower'], color_dist[ball_color]['Upper'])
             # delete backgrounds
             cnt_s = cv2.findContours(in_range_hsv.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
-            # print("2")
-            # serial_imu.flushInput()
-            # data_hex = serial_imu.read(33)
-            # angle_z = DueData(data_hex)
-            # print(DueData(data_hex))
-            # print("3")
-            # initialize the variables
             distance_1 = 0
             distance_2 = 0
             box1 = 0
@@ -939,7 +932,7 @@ while cap.isOpened() and serialFd.isOpen():  # while the capture is open
                 if last_command_char != "w":
                     go_ahead()
                     last_command_char = "w"
-                time.sleep(60)
+                time.sleep(1200)
             cv2.imshow('camera', frame)  # show the frame
             cv2.waitKey(1)  # let the frame wait
         else:
